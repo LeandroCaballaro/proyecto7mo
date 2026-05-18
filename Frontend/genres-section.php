@@ -1,11 +1,17 @@
+<?php $generos = api_get('movies/genres') ?: []; ?>
 <section id="generos" class="py-12">
     <div class="container mx-auto px-4">
         <h2 class="text-2xl font-bold">Géneros populares</h2>
         <div class="mt-6 grid gap-4 md:grid-cols-4">
-            <div class="bg-card p-4 rounded">Acción</div>
-            <div class="bg-card p-4 rounded">Comedia</div>
-            <div class="bg-card p-4 rounded">Drama</div>
-            <div class="bg-card p-4 rounded">Ciencia Ficción</div>
+            <?php if (empty($generos)): ?>
+                <p class="text-muted-foreground">No hay géneros cargados.</p>
+            <?php else: ?>
+                <?php foreach ($generos as $g): ?>
+                <a href="explorar.php?genre=<?= urlencode($g) ?>" class="bg-card p-4 rounded block hover:border-primary">
+                    <?= htmlspecialchars($g) ?>
+                </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
-    </div>
+        </div>
 </section>

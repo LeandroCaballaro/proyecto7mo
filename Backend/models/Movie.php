@@ -9,6 +9,15 @@ class Movie {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function find($id)
+    {
+        $pdo = Database::getInstance()->getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM movies WHERE id = ?");
+        $stmt->execute([(int) $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public static function featured()
     {
         $pdo = Database::getInstance()->getConnection();
