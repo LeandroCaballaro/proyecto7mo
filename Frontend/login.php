@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p class="label">Contraseña</p> 
                     <div class="password-container">
                         <input type="password" name="password" id="password" class="input" placeholder="Ingrese su contraseña" required>
-                        <span id="togglePassword" class="cursor-pointer select-none">👁</span>
+                        <span id="togglePassword" class="cursor-pointer select-none">🙈</span>
                     </div>
                 </div>
             </div>
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
             password.setAttribute('type', type);
             // Alternar el icono
-            this.textContent = type === 'password' ? '👁' : '🙈';
+            this.textContent = type === 'password' ? '🙈' : '🙉';
         });
     </script>
 </body>
