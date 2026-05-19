@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="signup-container">
       <div class="signup-card">
         <div class="signup-header">
-          <h1>Regístrate gratis</h1>
+          <h1>Regístrate Gratis</h1>
         </div>
 
         <?php if ($authError): ?>
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="form-group">
             <p class="label">Correo Electrónico</p>
-            <input type="email" id="email" name="email" placeholder="Correo electrónico" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+            <input type="email" id="email" name="email" placeholder="Correo Electrónico" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
           </div>
 
           <div class="form-group">
