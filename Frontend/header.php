@@ -2,7 +2,7 @@
 <header class="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
     <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <!-- Logo -->
-        <a href="index.php" class="flex items-center gap-2">
+        <a href="/proyecto7mo/index.php" class="flex items-center gap-2">
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                 <svg class="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16l13-8L7 4z"></path>
@@ -15,10 +15,10 @@
 
         <!-- Desktop Navigation -->
         <nav class="hidden items-center gap-6 md:flex">
-            <a href="index.php" class="text-sm font-medium text-foreground transition-colors hover:text-primary">Inicio</a>
-            <a href="explorar.php" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Explorar</a>
-            <a href="index.php#generos" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Géneros</a>
-            <a href="index.php#ranking" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Ranking</a>
+            <a href="/proyecto7mo/index.php" class="text-sm font-medium text-foreground transition-colors hover:text-primary">Inicio</a>
+            <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Explorar</a>
+            <a href="/proyecto7mo/index.php#generos" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Géneros</a>
+            <a href="/proyecto7mo/index.php#ranking" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Ranking</a>
         </nav>
 
         <!-- Desktop Actions -->
@@ -37,10 +37,10 @@
             </button>
             <?php if ($user): ?>
                 <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
-                <a href="index.php?logout=1" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Salir</a>
+                <a href="/proyecto7mo/index.php?logout=1" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Salir</a>
             <?php else: ?>
-                <a href="login.php" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Log In</a>
-                <a href="sing_up.php" class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded text-sm font-medium transition-colors">Sign Up</a>
+                <a href="/proyecto7mo/Frontend/login.php" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Log In</a>
+                <a href="/proyecto7mo/Frontend/sing_up.php" class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded text-sm font-medium transition-colors">Sign Up</a>
             <?php endif; ?>
         </div>
 
@@ -56,18 +56,18 @@
     <!-- Mobile Navigation -->
     <div id="mobile-menu" class="hidden border-t border-border bg-background md:hidden">
         <nav class="container mx-auto flex flex-col gap-4 px-4 py-4">
-            <a href="index.php" class="text-sm font-medium text-foreground transition-colors hover:text-primary">Inicio</a>
-            <a href="explorar.php" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Explorar</a>
-            <a href="index.php#generos" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Géneros</a>
-            <a href="index.php#ranking" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Ranking</a>
+            <a href="/proyecto7mo/index.php" class="text-sm font-medium text-foreground transition-colors hover:text-primary">Inicio</a>
+            <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Explorar</a>
+            <a href="/proyecto7mo/index.php#generos" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Géneros</a>
+            <a href="/proyecto7mo/index.php#ranking" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Ranking</a>
             <button class="text-left text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Buscar</button>
             <button class="text-left text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Favoritos</button>
             <?php if ($user): ?>
                 <span class="text-sm text-muted-foreground pt-2">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
-                <a href="index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Salir</a>
+                <a href="/proyecto7mo/index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Salir</a>
             <?php else: ?>
-                <a href="login.php" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Iniciar Sesión</a>
-                <a href="sing_up.php" class="text-center bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded">Registrarse</a>
+                <a href="/proyecto7mo/Frontend/login.php" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Iniciar Sesión</a>
+                <a href="/proyecto7mo/Frontend/sing_up.php" class="text-center bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded">Registrarse</a>
             <?php endif; ?>
         </nav>
     </div>

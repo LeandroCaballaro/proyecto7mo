@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-define('API_URL', 'http://localhost/proyecto7mo-main/Backend/public/api.php');
+define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
 
 function api_get($route, $extra = [])
 {
@@ -24,20 +24,20 @@ if (isset($_GET['logout'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexoHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="style/styles.css" rel="stylesheet">
+    <link href="Frontend/style/styles.css" rel="stylesheet">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-    <?php include 'header.php'; ?>
+    <?php include 'Frontend/header.php'; ?>
 
     <main class="flex-1">
-        <?php include 'hero-section.php'; ?>
-        <?php include 'features-section.php'; ?>
-        <?php include 'genres-section.php'; ?>
-        <?php include 'featured-movies-section.php'; ?>
-        <?php include 'top-reviewers-section.php'; ?>
-        <?php include 'cta-section.php'; ?>
+        <?php include 'Frontend/hero-section.php'; ?>
+        <?php include 'Frontend/features-section.php'; ?>
+        <?php include 'Frontend/genres-section.php'; ?>
+        <?php include 'Frontend/featured-movies-section.php'; ?>
+        <?php include 'Frontend/top-reviewers-section.php'; ?>
+        <?php include 'Frontend/cta-section.php'; ?>
     </main>
     
-    <?php include 'footer.php'; ?>
+    <?php include 'Frontend/footer.php'; ?>
 </body>
 </html>

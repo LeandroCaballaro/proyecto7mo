@@ -7,7 +7,7 @@ if (!empty($_SESSION['user'])) {
     exit;
 }
 
-define('API_URL', 'http://localhost/proyecto7mo-main/Backend/public/api.php');
+define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
 
 function api_post($route, $data)
 {
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="sing_up.php" class="signup-form">
+        <form method="POST" action="/proyecto7mo/Frontend/sing_up.php" class="signup-form">
           <div class="form-group">
             <p class="label">Nombre completo</p>
             <input type="text" id="name" name="name" placeholder="Nombre completo" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </button>
       </div>
         <p class="text-center text-xs text-muted-foreground mt-4">
-                ¿Ya tienes una cuenta? <a href="login.php" class="text-primary hover:underline font-semibold">Inicia sesión</a>
+                ¿Ya tienes una cuenta? <a href="/proyecto7mo/Frontend/login.php" class="text-primary hover:underline font-semibold">Inicia sesión</a>
             </p>
 
       </div>

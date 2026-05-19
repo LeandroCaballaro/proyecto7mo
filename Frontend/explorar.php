@@ -1,6 +1,6 @@
 <?php
 session_start();
-define('API_URL', 'http://localhost/proyecto7mo-main/Backend/public/api.php');
+define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
 
 function api_get($route, $extra = [])
 {
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['token'])) {
                                 <?php else: ?>
                                     <div class="mt-4 pt-4 border-t border-border text-center">
                                         <p class="text-xs text-muted-foreground">
-                                            <a href="index.php?login=1" class="text-primary hover:underline font-semibold">Inicia sesión</a> para calificar esta película.
+                                            <a href="/proyecto7mo/Frontend/login.php" class="text-primary hover:underline font-semibold">Inicia sesión</a> para calificar esta película.
                                         </p>
                                     </div>
                                 <?php endif; ?>
