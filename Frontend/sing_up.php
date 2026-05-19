@@ -93,9 +93,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <div class="form-group">
-            <p class="label">Contraseña</p>
-            <input type="password" id="password" name="password" placeholder="Contraseña (mín. 6 caracteres)" required>
+            <div class="password-container">
+              <p class="label">Contraseña</p>
+                <input type="password" name="password" id="password" class="input" placeholder="Ingrese su contraseña" required>
+                <span id="togglePassword" class="cursor-pointer select-none">🙈</span>
+            </div>
           </div>
+
+          <script>
+            const togglePassword = document.querySelector('#togglePassword');
+            const password = document.querySelector('#password');
+
+            togglePassword.addEventListener('click', function (e) {
+                // Alternar el tipo de input
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+                // Alternar el icono
+                this.textContent = type === 'password' ? '🙈' : '🙉';
+            });
+          </script>
 
           <button type="submit" class="btn-primary">Registrarse</button>
 

@@ -12,6 +12,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background-color: #1a1a2e;
   min-height: 100vh;
+  overflow-y: hidden;
   padding: 20px;
 }
 body::before {
@@ -24,11 +25,7 @@ body::before {
   background: rgba(10, 10, 30, 0.7); /* oscurece */
   z-index: -1;
 }
-header {
-  position: sticky;
-  top: 0;
-  z-index: 999;
-}
+
 .signup-container {
   width: 100%;
   max-width: 420px;
@@ -104,6 +101,26 @@ header {
 .form-group input:focus {
   border-color: #e94560;
   box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2);
+}
+
+.password-container {
+    position: relative;
+    width: 100%;
+}
+
+.password-container input {
+    padding-right: 40px;
+}
+
+#togglePassword {
+    position: absolute;
+    right: 1px;
+    top: 50%;
+    transform: translateY(-50%);
+    transform: translateX(-50%);
+    cursor: pointer;
+    color: #e94560;
+    font-size: 18px;
 }
 
 .btn-primary {
