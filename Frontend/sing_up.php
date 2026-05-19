@@ -83,14 +83,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form method="POST" action="sing_up.php" class="signup-form">
           <div class="form-group">
+            <p class="label">Nombre completo</p>
             <input type="text" id="name" name="name" placeholder="Nombre completo" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
           </div>
 
           <div class="form-group">
+            <p class="label">Correo Electrónico</p>
             <input type="email" id="email" name="email" placeholder="Correo electrónico" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
           </div>
 
           <div class="form-group">
+            <p class="label">Contraseña</p>
             <input type="password" id="password" name="password" placeholder="Contraseña (mín. 6 caracteres)" required>
           </div>
 
@@ -98,8 +101,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         </form>
 
+        <hr class="separador">
+
         <div class="divider">
-          <span class="divider-text">O utilice:</span>
+          <span class="divider-text">O utilice</span>
         </div>  
         <div class="social-buttons">
         <button class="btn-social btn-google">
@@ -112,15 +117,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           Registrate con Google
         </button>
       </div>
-        <div class="divider">
-          <span class="divider-text">¿Ya tienes una cuenta?</span>
-        </div>
+        <p class="text-center text-xs text-muted-foreground mt-4">
+                ¿Ya tienes una cuenta? <a href="login.php" class="text-primary hover:underline font-semibold">Inicia sesión</a>
+            </p>
 
-        <div class="social-buttons">
-          <a href="login.php" class="btn-social text-center block w-full py-2 bg-secondary text-foreground hover:bg-secondary/80 rounded transition-colors text-sm font-semibold">
-            Inicia Sesión
-          </a>
-        </div>
       </div>
     </div>
   </main>
