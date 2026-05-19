@@ -39,8 +39,8 @@
                 <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
                 <a href="index.php?logout=1" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Salir</a>
             <?php else: ?>
-                <a href="index.php?login=1" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Log In</a>
-                <a href="index.php?registro=1" class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded text-sm font-medium transition-colors">Sign Up</a>
+                <a href="login.php" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Log In</a>
+                <a href="sing_up.php" class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded text-sm font-medium transition-colors">Sign Up</a>
             <?php endif; ?>
         </div>
 
@@ -66,8 +66,8 @@
                 <span class="text-sm text-muted-foreground pt-2">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
                 <a href="index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Salir</a>
             <?php else: ?>
-                <a href="index.php?login=1" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Iniciar Sesión</a>
-                <a href="index.php?registro=1" class="text-center bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded">Registrarse</a>
+                <a href="login.php" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Iniciar Sesión</a>
+                <a href="sing_up.php" class="text-center bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded">Registrarse</a>
             <?php endif; ?>
         </nav>
     </div>
