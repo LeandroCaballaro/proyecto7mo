@@ -9,8 +9,15 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
 <header class="sticky top-0 z-50 w-full border-b border-border header-glass transition-all duration-300">
     <div class="container mx-auto flex h-16 items-center justify-between px-4">
         <!-- Logo -->
-        <a href="/proyecto7mo/index.php" class="flex items-center gap-2 group">
-            <img src="/proyecto7mo/public/NexoHub%20Logo.png" alt="NexoHub" class="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
+        <a href="/proyecto7mo/index.php" class="flex items-center gap-3 group">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary transition-transform duration-300 group-hover:scale-110 shadow-lg shadow-primary/25">
+                <svg class="h-7 w-7 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16l13-8L7 4z"></path>
+                </svg>
+            </div>
+            <span class="text-2xl font-extrabold text-foreground tracking-tight transition-colors duration-300 group-hover:text-primary">
+                Nexo<span class="text-primary group-hover:text-foreground transition-colors duration-300">Hub</span>
+            </span>
         </a>
 
         <!-- Desktop Navigation -->

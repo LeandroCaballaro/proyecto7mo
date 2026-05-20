@@ -69,51 +69,13 @@
                 </div>
             </div>
 
-            <!-- Hero Image / Movie Cards -->
+            <!-- Hero Image / Movie Cards replaced with NexoHub Logo -->
             <div class="relative hidden lg:block">
-                <div class="relative mx-auto w-full max-w-md">
-                    <!-- Main Card -->
-                    <div class="relative z-20 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-                        <div class="aspect-[2/3] bg-gradient-to-br from-secondary to-card">
-                            <div class="flex h-full flex-col items-center justify-center p-6 text-center">
-                                <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/20">
-                                    <svg class="h-10 w-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.586a1 1 0 01.707.293l.707.707A1 1 0 0012.414 11H13m-3 3a1 1 0 100-2 1 1 0 000 2z"></path>
-                                    </svg>
-                                </div>
-                                <p class="text-sm text-muted-foreground">Película Destacada</p>
-                                <h3 class="mt-2 text-xl font-bold text-foreground">Dune: Parte Dos</h3>
-                                <div class="mt-3 flex items-center gap-1">
-                                    <svg class="h-4 w-4 fill-primary text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                    </svg>
-                                    <svg class="h-4 w-4 fill-primary text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                    </svg>
-                                    <svg class="h-4 w-4 fill-primary text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                    </svg>
-                                    <svg class="h-4 w-4 fill-primary text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                    </svg>
-                                    <svg class="h-4 w-4 fill-primary text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                    </svg>
-                                    <span class="ml-2 text-sm text-muted-foreground">4.8</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <div class="flex items-center justify-between">
-                                <span class="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Ciencia Ficción</span>
-                                <span class="text-sm text-muted-foreground">2024</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Background Cards -->
-                    <div class="absolute -left-8 top-8 z-10 h-[85%] w-full -rotate-6 rounded-2xl border border-border bg-secondary/50"></div>
-                    <div class="absolute -right-8 top-16 z-0 h-[75%] w-full rotate-6 rounded-2xl border border-border bg-secondary/30"></div>
+                <div class="relative mx-auto w-full max-w-lg lg:max-w-xl flex items-center justify-center p-6">
+                    <!-- Glow effect in background -->
+                    <div class="absolute inset-0 bg-primary/10 rounded-full blur-3xl opacity-60 animate-pulse"></div>
+                    <!-- Logo image -->
+                    <img src="public/NexoHub%20Logo.png" alt="NexoHub Logo" class="relative z-10 w-full h-auto object-contain drop-shadow-[0_15px_30px_rgba(233,69,96,0.35)] transition-transform duration-500 hover:scale-105">
                 </div>
             </div>
         </div>
