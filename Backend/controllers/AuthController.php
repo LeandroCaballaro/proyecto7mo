@@ -93,7 +93,11 @@ class AuthController
     /** Extrae el token del header Authorization: Bearer <token> */
     private function bearerToken(): ?string
     {
-        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (!$header && function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            $header = $headers['Authorization'] ?? $headers['authorization'] ?? $header;
+        }
         if (preg_match('/Bearer\s+(\S+)/i', $header, $matches)) {
             return $matches[1];
         }

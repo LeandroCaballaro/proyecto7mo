@@ -28,8 +28,12 @@ class MoviesController
 
     private function token()
     {
-        $h = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-        if (preg_match('/Bearer\s+(\S+)/', $h, $m)) {
+        $h = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (!$h && function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            $h = $headers['Authorization'] ?? $headers['authorization'] ?? $h;
+        }
+        if (preg_match('/Bearer\s+(\S+)/i', $h, $m)) {
             return $m[1];
         }
         return null;
@@ -98,6 +102,40 @@ class MoviesController
         $this->json($this->service->getReviewsForMovie($movieId));
     }
 
+    public function reviewResponses($reviewId)
+    {
+        $this->json($this->service->getReviewResponses($reviewId));
+    }
+
+    public function showMovie($movieId)
+    {
+        $movie = $this->service->getById($movieId);
+        if (!$movie) {
+            $this->json(['error' => 'Película no encontrada'], 404);
+        }
+        $this->json($movie);
+    }
+
+    public function createMovie()
+    {
+        $user = $this->service->userFromToken($this->token());
+        if (!$user) {
+            $this->json(['error' => 'No autorizado'], 401);
+        }
+        $d = $this->body();
+        $result = $this->service->createMovie(
+            $user['id'],
+            $d['title'] ?? '',
+            $d['genre'] ?? '',
+            $d['year'] ?? 0,
+            $d['description'] ?? ''
+        );
+        if (isset($result['error'])) {
+            $this->json($result, 400);
+        }
+        $this->json($result, 201);
+    }
+
     public function addReview()
     {
         $user = $this->service->userFromToken($this->token());
@@ -108,6 +146,25 @@ class MoviesController
         $result = $this->service->addReview(
             $user['id'],
             $d['movie_id'] ?? 0,
+            $d['rating'] ?? 0,
+            $d['comment'] ?? ''
+        );
+        if (isset($result['error'])) {
+            $this->json($result, 400);
+        }
+        $this->json($result, 201);
+    }
+
+    public function addReviewResponse($reviewId)
+    {
+        $user = $this->service->userFromToken($this->token());
+        if (!$user) {
+            $this->json(['error' => 'No autorizado'], 401);
+        }
+        $d = $this->body();
+        $result = $this->service->addReviewResponse(
+            $user['id'],
+            $reviewId,
             $d['rating'] ?? 0,
             $d['comment'] ?? ''
         );
