@@ -3,7 +3,7 @@ session_start();
 
 // Si ya está autenticado, redirigir al inicio
 if (!empty($_SESSION['user'])) {
-    header('Location: index.php');
+    header('Location: /proyecto7mo/index.php');
     exit;
 }
 
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($res['token'])) {
             $_SESSION['token'] = $res['token'];
             $_SESSION['user'] = $res['user'];
-            header('Location: index.php');
+            header('Location: /proyecto7mo/index.php');
             exit;
         } else {
             $authError = $res['error'] ?? 'Credenciales incorrectas';
@@ -128,7 +128,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             this.textContent = type === 'password' ? '🙈' : '🙉';
         });
         async function handleCredentialResponse(response) {
-    console.log(response)
+fetch('/proyecto7mo/Frontend/google-login.php', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        credential: response.credential
+    })
+})
+.then(res => res.json())
+.then(data => {
+
+    if (data.success) {
+
+        window.location.href = '/proyecto7mo/index.php';
+
+    } else {
+
+        alert('Error con Google Login');
+
+    }
+
+});
 }
     </script>
 </body>
