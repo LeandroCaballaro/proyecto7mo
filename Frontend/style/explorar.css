@@ -1,0 +1,26 @@
+.rating{
+    color: #ff6781;
+    background-color: #1a1a2e;
+    padding: 11px 11px;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    width: 50%;
+    margin-top: 5px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+.comments{
+    color: #ff6781;
+    background-color: #1a1a2e;
+    padding: 11px 11px;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    width: 100%;
+    margin-top: 5px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+.label{
+    color: #b7b7b7;
+    font-size: 16px;
+}
