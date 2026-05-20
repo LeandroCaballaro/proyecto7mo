@@ -1,3 +1,14 @@
+<?php 
+$generos = api_get('movies/genres') ?: []; 
+$genreInfo = [
+    'Acción' => ['emoji' => '🎬', 'desc' => 'Películas llenas de adrenalina, combates y emoción.'],
+    'Terror' => ['emoji' => '👻', 'desc' => 'Para los amantes del suspenso, lo sobrenatural y el miedo.'],
+    'Comedia' => ['emoji' => '😂', 'desc' => 'Risas garantizadas y momentos divertidos con los mejores elencos.'],
+    'Drama' => ['emoji' => '🎭', 'desc' => 'Historias profundas, emotivas y personajes memorables.'],
+    'Ciencia Ficción' => ['emoji' => '🚀', 'desc' => 'Viajes espaciales, tecnología del futuro y realidades alternas.'],
+    'Romance' => ['emoji' => '❤️', 'desc' => 'Historias de amor, pasión y romance inolvidables.'],
+];
+?>
 <section class="py-20" id="generos">
     <div class="container mx-auto px-4">
         <div class="mb-12 text-center">
@@ -7,48 +18,22 @@
             </p>
         </div>
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="#" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
-                <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="text-2xl">🎬</span>
-                </div>
-                <h3 class="mb-2 text-xl font-semibold text-foreground">Acción</h3>
-                <p class="text-muted-foreground">Películas llenas de adrenalina y emoción</p>
-            </a>
-            <a href="#" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
-                <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="text-2xl">👻</span>
-                </div>
-                <h3 class="mb-2 text-xl font-semibold text-foreground">Terror</h3>
-                <p class="text-muted-foreground">Para los amantes del suspense y el miedo</p>
-            </a>
-            <a href="#" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
-                <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="text-2xl">😂</span>
-                </div>
-                <h3 class="mb-2 text-xl font-semibold text-foreground">Comedia</h3>
-                <p class="text-muted-foreground">Risas garantizadas con las mejores comedias</p>
-            </a>
-            <a href="#" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
-                <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="text-2xl">🎭</span>
-                </div>
-                <h3 class="mb-2 text-xl font-semibold text-foreground">Drama</h3>
-                <p class="text-muted-foreground">Historias profundas y emotivas</p>
-            </a>
-            <a href="#" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
-                <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="text-2xl">🚀</span>
-                </div>
-                <h3 class="mb-2 text-xl font-semibold text-foreground">Ciencia Ficción</h3>
-                <p class="text-muted-foreground">Viajes al futuro y mundos imaginarios</p>
-            </a>
-            <a href="#" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg">
-                <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="text-2xl">❤️</span>
-                </div>
-                <h3 class="mb-2 text-xl font-semibold text-foreground">Romance</h3>
-                <p class="text-muted-foreground">Historias de amor inolvidables</p>
-            </a>
+            <?php if (empty($generos)): ?>
+                <p class="text-muted-foreground col-span-full text-center">No hay géneros cargados en el sistema.</p>
+            <?php else: ?>
+                <?php foreach ($generos as $g): ?>
+                    <?php 
+                    $info = $genreInfo[$g] ?? ['emoji' => '🎥', 'desc' => "Descubre las mejores películas clasificadas en el género $g."];
+                    ?>
+                    <a href="explorar.php?genre=<?= urlencode($g) ?>" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg hover:-translate-y-1 transform duration-300 block">
+                        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <span class="text-2xl"><?= $info['emoji'] ?></span>
+                        </div>
+                        <h3 class="mb-2 text-xl font-semibold text-foreground"><?= htmlspecialchars($g) ?></h3>
+                        <p class="text-muted-foreground text-sm"><?= htmlspecialchars($info['desc']) ?></p>
+                    </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </section>

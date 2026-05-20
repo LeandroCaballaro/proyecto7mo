@@ -1,3 +1,4 @@
+<?php $peliculas = api_get('movies/featured') ?: []; ?>
 <section class="bg-card py-20">
     <div class="container mx-auto px-4">
         <div class="mb-12 text-center">
@@ -7,33 +8,26 @@
             </p>
         </div>
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div class="rounded-xl border border-border bg-background p-6">
-                <div class="aspect-[2/3] mb-4 rounded-lg bg-secondary"></div>
-                <h3 class="text-xl font-semibold text-foreground">Dune: Parte Dos</h3>
-                <p class="text-muted-foreground">Ciencia Ficción • 2024</p>
-                <div class="mt-2 flex items-center gap-1">
-                    <span class="text-primary">★★★★★</span>
-                    <span class="text-sm text-muted-foreground">4.8</span>
+            <?php if (empty($peliculas)): ?>
+                <p class="text-muted-foreground col-span-full text-center">No hay películas destacadas disponibles.</p>
+            <?php else: ?>
+                <?php foreach ($peliculas as $p): ?>
+                <div class="rounded-xl border border-border bg-background p-6 hover:shadow-lg transition-shadow">
+                    <div class="aspect-[2/3] mb-4 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/30 flex items-center justify-center relative overflow-hidden">
+                        <span class="text-4xl">🎥</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground"><?= htmlspecialchars($p['title']) ?></h3>
+                    <p class="text-muted-foreground text-sm mt-1"><?= htmlspecialchars($p['genre'] ?? 'General') ?> • <?= (int) ($p['year'] ?? 2024) ?></p>
+                    <div class="mt-2 flex items-center gap-1">
+                        <span class="text-primary">★★★★★</span>
+                        <span class="text-sm text-muted-foreground">4.8</span>
+                    </div>
+                    <?php if (!empty($p['description'])): ?>
+                        <p class="text-sm text-muted-foreground mt-2 line-clamp-3"><?= htmlspecialchars($p['description']) ?></p>
+                    <?php endif; ?>
                 </div>
-            </div>
-            <div class="rounded-xl border border-border bg-background p-6">
-                <div class="aspect-[2/3] mb-4 rounded-lg bg-secondary"></div>
-                <h3 class="text-xl font-semibold text-foreground">Oppenheimer</h3>
-                <p class="text-muted-foreground">Drama • 2023</p>
-                <div class="mt-2 flex items-center gap-1">
-                    <span class="text-primary">★★★★★</span>
-                    <span class="text-sm text-muted-foreground">4.7</span>
-                </div>
-            </div>
-            <div class="rounded-xl border border-border bg-background p-6">
-                <div class="aspect-[2/3] mb-4 rounded-lg bg-secondary"></div>
-                <h3 class="text-xl font-semibold text-foreground">Barbie</h3>
-                <p class="text-muted-foreground">Comedia • 2023</p>
-                <div class="mt-2 flex items-center gap-1">
-                    <span class="text-primary">★★★★☆</span>
-                    <span class="text-sm text-muted-foreground">4.5</span>
-                </div>
-            </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </section>
