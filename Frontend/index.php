@@ -1,7 +1,11 @@
 <?php
 session_start();
 
+<<<<<<< HEAD
 define('API_URL', 'http://localhost/proyecto7mo-main/Backend/public/api.php');
+=======
+define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
+>>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
 
 function api_get($route, $extra = [])
 {

@@ -112,6 +112,7 @@ class AuthService
         return $this->userModel->findByToken($token);
     }
 
+<<<<<<< HEAD
     /**
      * Autentica o registra un usuario que inicia sesión mediante Google.
      */
@@ -139,6 +140,8 @@ class AuthService
         return $this->buildSession($userId, $name, $email);
     }
 
+=======
+>>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
     // -------------------------------------------------------------------------
     // HELPER PRIVADO
     // -------------------------------------------------------------------------
