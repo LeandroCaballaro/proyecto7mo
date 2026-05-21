@@ -24,7 +24,6 @@ body {
 .text-card-foreground { color: var(--card-foreground); }
 .text-muted-foreground { color: var(--muted-foreground); }
 .border-border { border-color: var(--border); }
-<<<<<<< HEAD
 
 /* Missing utility classes for custom variables */
 .bg-background { background-color: var(--background); }
@@ -58,5 +57,4 @@ body {
 .nav-link:hover::after, .nav-link.active::after {
     width: 100%;
 }
-=======
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
+

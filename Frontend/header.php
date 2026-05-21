@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <?php
 $user = $_SESSION['user'] ?? null;
 
@@ -18,25 +17,10 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             </div>
             <span class="text-2xl font-extrabold text-foreground tracking-tight transition-colors duration-300 group-hover:text-primary">
                 Nexo<span class="text-primary group-hover:text-foreground transition-colors duration-300">Hub</span>
-=======
-<?php $user = $_SESSION['user'] ?? null; ?>
-<header class="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
-    <div class="container mx-auto flex h-16 items-center justify-between px-4">
-        <!-- Logo -->
-        <a href="/proyecto7mo/index.php" class="flex items-center gap-2">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                <svg class="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16l13-8L7 4z"></path>
-                </svg>
-            </div>
-            <span class="text-xl font-bold text-foreground">
-                Nexo<span class="text-primary">Hub</span>
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
             </span>
         </a>
 
         <!-- Desktop Navigation -->
-<<<<<<< HEAD
         <nav class="hidden items-center gap-8 md:flex">
             <a href="/proyecto7mo/index.php" class="text-sm font-semibold nav-link <?= $is_home ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Inicio</a>
             <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-semibold nav-link <?= $is_explorar ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Explorar</a>
@@ -47,35 +31,18 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
         <!-- Desktop Actions -->
         <div class="hidden items-center gap-4 md:flex">
             <button class="text-muted-foreground hover:text-primary transition-colors duration-200 p-2" title="Buscar">
-=======
-        <nav class="hidden items-center gap-6 md:flex">
-            <a href="/proyecto7mo/index.php" class="text-sm font-medium text-foreground transition-colors hover:text-primary">Inicio</a>
-            <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Explorar</a>
-            <a href="/proyecto7mo/index.php#generos" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Géneros</a>
-            <a href="/proyecto7mo/index.php#ranking" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Ranking</a>
-        </nav>
-
-        <!-- Desktop Actions -->
-        <div class="hidden items-center gap-3 md:flex">
-            <button class="text-muted-foreground hover:text-foreground p-2">
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
                 <span class="sr-only">Buscar</span>
             </button>
-<<<<<<< HEAD
             <button class="text-muted-foreground hover:text-primary transition-colors duration-200 p-2" title="Favoritos">
-=======
-            <button class="text-muted-foreground hover:text-foreground p-2">
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                 </svg>
                 <span class="sr-only">Favoritos</span>
             </button>
             <?php if ($user): ?>
-<<<<<<< HEAD
                 <div class="flex items-center gap-3">
                     <a href="/proyecto7mo/Frontend/user.php" class="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></a>
                     <a href="/proyecto7mo/index.php?logout=1" class="border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">Salir</a>
@@ -83,22 +50,11 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             <?php else: ?>
                 <a href="/proyecto7mo/Frontend/login.php" class="border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">Log In</a>
                 <a href="/proyecto7mo/Frontend/sing_up.php" class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-primary/20">Sign Up</a>
-=======
-                <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
-                <a href="/proyecto7mo/index.php?logout=1" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Salir</a>
-            <?php else: ?>
-                <a href="/proyecto7mo/Frontend/login.php" class="border border-border text-foreground hover:bg-secondary px-4 py-2 rounded text-sm font-medium transition-colors">Log In</a>
-                <a href="/proyecto7mo/Frontend/sing_up.php" class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded text-sm font-medium transition-colors">Sign Up</a>
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
             <?php endif; ?>
         </div>
 
         <!-- Mobile Menu Button -->
-<<<<<<< HEAD
         <button id="menu-toggle" class="text-foreground md:hidden p-2 rounded-lg hover:bg-secondary focus:outline-none transition-colors duration-200">
-=======
-        <button id="menu-toggle" class="text-foreground md:hidden p-2">
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
@@ -107,7 +63,6 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
     </div>
 
     <!-- Mobile Navigation -->
-<<<<<<< HEAD
     <div id="mobile-menu" class="hidden border-t border-border bg-background md:hidden transition-all duration-300">
         <nav class="container mx-auto flex flex-col gap-4 px-4 py-6">
             <a href="/proyecto7mo/index.php" class="text-sm font-semibold <?= $is_home ? 'text-primary' : 'text-muted-foreground' ?> hover:text-primary transition-colors duration-200">Inicio</a>
@@ -163,23 +118,3 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
-=======
-    <div id="mobile-menu" class="hidden border-t border-border bg-background md:hidden">
-        <nav class="container mx-auto flex flex-col gap-4 px-4 py-4">
-            <a href="/proyecto7mo/index.php" class="text-sm font-medium text-foreground transition-colors hover:text-primary">Inicio</a>
-            <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Explorar</a>
-            <a href="/proyecto7mo/index.php#generos" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Géneros</a>
-            <a href="/proyecto7mo/index.php#ranking" class="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Ranking</a>
-            <button class="text-left text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Buscar</button>
-            <button class="text-left text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Favoritos</button>
-            <?php if ($user): ?>
-                <span class="text-sm text-muted-foreground pt-2">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
-                <a href="/proyecto7mo/index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Salir</a>
-            <?php else: ?>
-                <a href="/proyecto7mo/Frontend/login.php" class="text-center border border-border text-foreground hover:bg-secondary px-4 py-2 rounded mt-2">Iniciar Sesión</a>
-                <a href="/proyecto7mo/Frontend/sing_up.php" class="text-center bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded">Registrarse</a>
-            <?php endif; ?>
-        </nav>
-    </div>
-</header>
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73

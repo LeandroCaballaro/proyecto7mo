@@ -25,11 +25,7 @@ $genreInfo = [
                     <?php 
                     $info = $genreInfo[$g] ?? ['emoji' => '🎥', 'desc' => "Descubre las mejores películas clasificadas en el género $g."];
                     ?>
-<<<<<<< HEAD
                     <a href="Frontend/explorar.php?genre=<?= urlencode($g) ?>" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg hover:-translate-y-1 transform duration-300 block">
-=======
-                    <a href="explorar.php?genre=<?= urlencode($g) ?>" class="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-lg hover:-translate-y-1 transform duration-300 block">
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
                         <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
                             <span class="text-2xl"><?= $info['emoji'] ?></span>
                         </div>

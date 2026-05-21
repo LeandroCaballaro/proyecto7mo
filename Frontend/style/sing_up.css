@@ -1,10 +1,7 @@
 * {
   margin: 0;
   padding: 0;
-<<<<<<< HEAD
-=======
   box-sizing: border-box;
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
 }
 
 body {
@@ -14,13 +11,8 @@ body {
   background-repeat: no-repeat;  /* no se repita */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background-color: #1a1a2e;
-<<<<<<< HEAD
-  margin: 0;
-  padding: 0;
-=======
   min-height: 100vh;
   padding: 20px;
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
 }
 body::before {
   content: "";

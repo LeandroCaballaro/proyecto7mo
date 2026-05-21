@@ -40,13 +40,9 @@ if ($parts[0] === 'auth') {
         $auth->login();
     }
 
-<<<<<<< HEAD
     if ($sub === 'google' && $method === 'POST') {
         $auth->googleLogin();
     }
-
-=======
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
     if ($sub === 'logout' && $method === 'POST') {
         $auth->logout();
     }

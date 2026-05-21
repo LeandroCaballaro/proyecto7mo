@@ -3,12 +3,8 @@ body {
     background-size: cover;        /* que cubra toda la pantalla */
     background-position: center;   /* centrada */
     background-repeat: no-repeat;  /* no se repita */
-<<<<<<< HEAD
     margin: 0;
     padding: 0;
-=======
-
->>>>>>> 7f18f1ab49d683819ce880bd7457e3da0465fd73
 }
 body::before {
     content: "";
