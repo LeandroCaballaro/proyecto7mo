@@ -36,4 +36,3 @@ $genreInfo = [
             <?php endif; ?>
         </div>
     </div>
-</section>
