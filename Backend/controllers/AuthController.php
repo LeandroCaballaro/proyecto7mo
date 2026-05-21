@@ -79,6 +79,25 @@ class AuthController
     }
 
     // -------------------------------------------------------------------------
+    // POST /auth/google
+    // Body JSON: { "name": "...", "email": "..." }
+    // -------------------------------------------------------------------------
+    public function googleLogin(): void
+    {
+        $data = $this->body();
+        $result = $this->service->googleLogin(
+            $data['name']  ?? 'Usuario',
+            $data['email'] ?? ''
+        );
+
+        if (isset($result['error'])) {
+            $this->json($result, 400);
+        }
+
+        $this->json($result);
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers privados
     // -------------------------------------------------------------------------
 

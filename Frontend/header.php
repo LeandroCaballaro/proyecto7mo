@@ -44,7 +44,7 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             </button>
             <?php if ($user): ?>
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
+                    <a href="/proyecto7mo/Frontend/user.php" class="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></a>
                     <a href="/proyecto7mo/index.php?logout=1" class="border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">Salir</a>
                 </div>
             <?php else: ?>
@@ -84,7 +84,7 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             <div class="border-t border-border pt-4 mt-2">
                 <?php if ($user): ?>
                     <div class="flex flex-col gap-3">
-                        <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
+                        <a href="/proyecto7mo/Frontend/user.php" class="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></a>
                         <a href="/proyecto7mo/index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg font-semibold transition-all duration-200">Salir</a>
                     </div>
                 <?php else: ?>
