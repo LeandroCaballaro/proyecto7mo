@@ -70,6 +70,7 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
     <title>Explorar Películas - NexoHub</title>
     <meta name="description" content="Explora películas por género y reseñas de la comunidad">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style/explorar.css">
     <link href="style/styles.css" rel="stylesheet">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
@@ -243,14 +244,14 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
                                         <input type="hidden" name="action" value="submit_review">
                                         <input type="hidden" name="movie_id" value="<?= (int) $p['id'] ?>">
                                         <div class="flex items-center justify-between">
-                                            <label class="text-xs font-semibold text-muted-foreground">Calificación:</label>
-                                            <select name="rating" class="rounded border border-border bg-background text-foreground text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none">
+                                            <label class="label">Calificación:</label>
+                                            <select name="rating" class="rating">
                                                 <?php for ($i = 5; $i >= 1; $i--): ?>
-                                                    <option value="<?= $i ?>"><?= str_repeat('★', $i) . str_repeat('☆', 5 - $i) ?></option>
+                                                    <option value="<?= $i ?>" class="stars"><?= str_repeat('★', $i) . str_repeat('☆', 5 - $i) ?></option>
                                                 <?php endfor; ?>
                                             </select>
                                         </div>
-                                        <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="w-full text-xs rounded border border-border bg-background px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                                        <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="comments">
                                         <button type="submit" class="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 py-2 text-xs font-semibold transition-colors">
                                             Publicar Reseña
                                         </button>

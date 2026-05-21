@@ -7,9 +7,6 @@
             Comienza a compartir tus reseñas y construye tu reputación como crítico de cine
         </p>
         <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <button class="bg-primary-foreground text-primary hover:bg-primary-foreground/90 px-6 py-3 rounded-lg font-medium">
-                Registrarse Gratis
-            </button>
             <button class="border border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 px-6 py-3 rounded-lg font-medium">
                 Explorar Películas
             </button>
