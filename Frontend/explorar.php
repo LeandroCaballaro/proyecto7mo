@@ -119,16 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['token'])) {
                                     <form method="post" class="mt-4 pt-4 border-t border-border space-y-3">
                                         <input type="hidden" name="movie_id" value="<?= (int) $p['id'] ?>">
                                         <div class="flex items-center justify-between">
-<<<<<<< HEAD
-                                            <label class="text-xs font-semibold text-muted-foreground">Calificación:</label>
-                                            <select name="rating" class="rounded border border-border bg-background text-foreground text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none">
-                                                <?php for ($i = 5; $i >= 1; $i--): ?>
-                                                    <option value="<?= $i ?>"><?= str_repeat('★', $i) . str_repeat('☆', 5 - $i) ?></option>
-                                                <?php endfor; ?>
-                                            </select>
-                                        </div>
-                                        <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="w-full text-xs rounded border border-border bg-background px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-=======
                                             <label class="label">Calificación:</label>
                                             <select name="rating" class="rating">
                                                 <?php for ($i = 5; $i >= 1; $i--): ?>
@@ -137,7 +127,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['token'])) {
                                             </select>
                                         </div>
                                         <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="comments">
->>>>>>> feature/frontend
                                         <button type="submit" class="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 py-2 text-xs font-semibold transition-colors">
                                             Publicar Reseña
                                         </button>
