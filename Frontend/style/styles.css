@@ -24,3 +24,36 @@ body {
 .text-card-foreground { color: var(--card-foreground); }
 .text-muted-foreground { color: var(--muted-foreground); }
 .border-border { border-color: var(--border); }
+
+/* Missing utility classes for custom variables */
+.bg-background { background-color: var(--background); }
+.bg-background\/95 { background-color: rgba(26, 26, 46, 0.95); }
+.text-foreground { color: var(--foreground); }
+
+/* Header Glassmorphism and animations */
+.header-glass {
+    background-color: rgba(26, 26, 46, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+.nav-link {
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -4px;
+    left: 0;
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+}
+
+.nav-link:hover::after, .nav-link.active::after {
+    width: 100%;
+}

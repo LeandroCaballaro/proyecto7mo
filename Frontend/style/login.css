@@ -3,7 +3,8 @@ body {
     background-size: cover;        /* que cubra toda la pantalla */
     background-position: center;   /* centrada */
     background-repeat: no-repeat;  /* no se repita */
-
+    margin: 0;
+    padding: 0;
 }
 body::before {
     content: "";
