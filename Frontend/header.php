@@ -1,5 +1,7 @@
 <?php
 $user = $_SESSION['user'] ?? null;
+$userPhoto = $user['photo'] ?? null;
+$userInitial = $user ? mb_strtoupper(mb_substr($user['name'], 0, 1, 'UTF-8')) : '';
 
 // Determine current page to highlight active navigation link
 $uri = $_SERVER['REQUEST_URI'] ?? '';
@@ -44,7 +46,13 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             </button>
             <?php if ($user): ?>
                 <div class="flex items-center gap-3">
-                    <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
+                    <a href="/proyecto7mo/Frontend/user.php" class="inline-flex items-center justify-center h-11 w-11 rounded-full overflow-hidden border border-border bg-secondary hover:border-primary transition-all duration-200">
+                        <?php if ($userPhoto): ?>
+                            <img src="<?= htmlspecialchars($userPhoto) ?>" alt="Avatar" class="h-full w-full object-cover">
+                        <?php else: ?>
+                            <span class="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-semibold text-base"><?= htmlspecialchars($userInitial) ?></span>
+                        <?php endif; ?>
+                    </a>
                     <a href="/proyecto7mo/index.php?logout=1" class="border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200">Salir</a>
                 </div>
             <?php else: ?>
@@ -84,7 +92,16 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             <div class="border-t border-border pt-4 mt-2">
                 <?php if ($user): ?>
                     <div class="flex flex-col gap-3">
-                        <span class="text-sm text-muted-foreground">Hola, <strong class="text-foreground"><?= htmlspecialchars($user['name']) ?></strong></span>
+                        <a href="/proyecto7mo/Frontend/user.php" class="inline-flex items-center gap-3">
+                            <span class="inline-flex h-11 w-11 items-center justify-center rounded-full overflow-hidden border border-border bg-secondary">
+                                <?php if ($userPhoto): ?>
+                                    <img src="<?= htmlspecialchars($userPhoto) ?>" alt="Avatar" class="h-full w-full object-cover">
+                                <?php else: ?>
+                                    <span class="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-semibold text-base"><?= htmlspecialchars($userInitial) ?></span>
+                                <?php endif; ?>
+                            </span>
+                            <span class="text-sm text-muted-foreground">Mi perfil</span>
+                        </a>
                         <a href="/proyecto7mo/index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg font-semibold transition-all duration-200">Salir</a>
                     </div>
                 <?php else: ?>

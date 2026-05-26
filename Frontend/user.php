@@ -2,8 +2,8 @@
 session_start();
 
 // Obtener datos del usuario logueado o usar fallback de la imagen
-$user_name = $_SESSION['user']['name'] ?? 'Gavilan Sebastian';
-$user_email = $_SESSION['user']['email'] ?? 'gavilansebastian777@gmail.com';
+$user_name = $_SESSION['user']['name'] ?? 'Usuario';
+$user_email = $_SESSION['user']['email'] ?? 'usuario@gmail.com';
 $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 ?>
 <!DOCTYPE html>
@@ -104,7 +104,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                     </button>
                     <span class="header-brand-movil">NexoHub Perfil</span>
                 </div>
-                
+
                 <div class="header-acciones">
                     <!-- Avatar inicial pequeño -->
                     <div class="avatar-pequeno">
@@ -114,24 +114,21 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
             </header>
 
             <!-- Contenedor central de información de perfil -->
-            <section class="perfil-seccion-central">
+            <section id="perfil" class="perfil-seccion-central content-section">
                 
                 <!-- Avatar de usuario grande con botón de foto flotante -->
                 <div class="avatar-grande-container">
-                    <div class="avatar-grande">
-                        <span><?= $user_initial ?></span>
+                    <div class="avatar-grande" id="profileAvatar">
+                        <span id="profileInitial"><?= $user_initial ?></span>
                     </div>
-                    <button class="btn-cambiar-foto" title="Cambiar foto de perfil">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                            <path d="M17 19c1.1 0 2-.9 2-2v-4h-2v4h-4v2h4z" style="display:none;"/>
-                        </svg>
+                    <button class="btn-cambiar-foto" id="btnCambiarFoto" type="button" title="Cambiar foto de perfil">
                         <div class="camara-overlay">
                             <svg viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 12m-3.2 0a3.2 3.2 0 1 1 6.4 0a3.2 3.2 0 1 1 -6.4 0M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5 5s-2.24 5-5 5z"/>
                             </svg>
                         </div>
                     </button>
+                    <input type="file" id="inputFotoPerfil" accept="image/*" style="display:none">
                 </div>
 
                 <!-- Nombre y Correo del Usuario -->
@@ -182,6 +179,86 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 
             </section>
 
+            <section id="resenas" class="perfil-seccion-central content-section section-hidden">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Mis reseñas</h2>
+                        <p class="section-description">Aquí verás las películas y series a las que ya les hiciste una reseña.</p>
+                    </div>
+                    <div class="review-list" id="reviewList">
+                        <div class="empty-state">
+                            <p>Todavía no se han hecho reseñas.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="actividad" class="perfil-seccion-central content-section section-hidden">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Mi actividad</h2>
+                        <p class="section-description">Revisa tu actividad reciente en NexoHub.</p>
+                    </div>
+                    <div class="empty-state">
+                        <p>Aquí aparecerán próximas actualizaciones de tu actividad.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="amigos" class="perfil-seccion-central content-section section-hidden">
+                <div class="section-card">
+                    <div class="friends-header">
+                            <h2>Amigos</h2>
+                    </div>
+                    <div class="friends-filter-row">
+                        <div class="search-wrapper">
+                            <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true">
+                                <path fill="currentColor" d="M21.71 20.29l-3.4-3.39A8.93 8.93 0 0 0 19 10a9 9 0 1 0-9 9 8.93 8.93 0 0 0 6.9-3.69l3.39 3.4a1 1 0 0 0 1.42-1.42zM4 10a6 6 0 1 1 6 6 6 6 0 0 1-6-6z"/>
+                            </svg>
+                            <input id="buscarAmigos" type="search" class="friends-search" placeholder="Buscar amigos" aria-label="Buscar amigos">
+                        </div>
+                    </div>
+                    <div class="empty-state" id="friendsMessage">Aún no tienes amigos.</div>
+                    <div class="friend-grid" id="friendGrid"></div>
+                </div>
+            </section>
+
+            <section id="config" class="perfil-seccion-central content-section section-hidden">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>Configuración</h2>
+                        <p class="section-description">Ajusta tu tema y la visibilidad de tu perfil.</p>
+                    </div>
+                    <div class="settings-card">
+                        <div class="settings-row settings-card-long">
+                            <div class="settings-card-title">
+                                <span class="settings-label">Tema</span>
+                                <p class="settings-note">Selecciona claro u oscuro para tu perfil.</p>
+                            </div>
+                            <label class="setting-toggle theme-toggle">
+                                <input type="checkbox" id="themeToggle">
+                                <span class="toggle-slider theme-slider">
+                                    <span class="toggle-icon sun-icon">☀</span>
+                                    <span class="toggle-icon moon-icon">🌙</span>
+                                </span>
+                                <span class="toggle-label" id="themeLabel">Oscuro</span>
+                            </label>
+                        </div>
+                        <div class="settings-row settings-card-long">
+                            <div class="settings-card-title">
+                                <span class="settings-label">Privacidad</span>
+                                <p class="settings-note">Elige quién puede ver tu perfil.</p>
+                            </div>
+                            <div class="privacy-options" id="privacyOptions">
+                                <button type="button" class="privacy-option" data-value="public">Público</button>
+                                <button type="button" class="privacy-option" data-value="friends">Solo amigos</button>
+                                <button type="button" class="privacy-option" data-value="private">Privado</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
         </main>
         
     </div>
@@ -195,8 +272,149 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
             const sidebar = document.querySelector('.sidebar-estatico');
             const overlay = document.getElementById('sidebarOverlay');
             const navItems = document.querySelectorAll('.nav-item');
+            const sections = document.querySelectorAll('.content-section');
+            const inputDescripcion = document.getElementById('inputDescripcion');
+            const btnCambiarFoto = document.getElementById('btnCambiarFoto');
+            const inputFotoPerfil = document.getElementById('inputFotoPerfil');
+            const profileAvatar = document.getElementById('profileAvatar');
+            const profileInitial = document.getElementById('profileInitial');
+            const smallAvatar = document.querySelector('.avatar-pequeno');
+            const themeToggle = document.getElementById('themeToggle');
+            const themeLabel = document.getElementById('themeLabel');
+            const privacyOptions = document.querySelectorAll('.privacy-option');
+            const buscarAmigos = document.getElementById('buscarAmigos');
+            const friendGrid = document.getElementById('friendGrid');
+            const friendsMessage = document.getElementById('friendsMessage');
 
-            // Abrir y cerrar menú móvil
+            const reviews = [];
+            const friends = [
+                {
+                    name: 'Juan Pérez',
+                    description: 'Fanático del cine con ojo crítico en thrillers y dramas.',
+                    reputation: '4.9',
+                    reviews: 18,
+                    initials: 'JP',
+                    photo: null
+                }
+            ];
+
+            const showSection = (sectionId) => {
+                sections.forEach(section => {
+                    section.classList.toggle('section-hidden', section.id !== sectionId);
+                });
+            };
+
+            const setActiveNav = (activeItem) => {
+                navItems.forEach(nav => nav.classList.toggle('active', nav === activeItem));
+            };
+
+            const renderFriendCard = (friend) => {
+                const card = document.createElement('div');
+                card.className = 'friend-card';
+                card.innerHTML = `
+                    <div class="friend-avatar">${friend.photo ? `<img src="${friend.photo}" alt="${friend.name}" />` : friend.initials}</div>
+                    <div class="friend-info">
+                        <strong>${friend.name}</strong>
+                        <span>${friend.description}</span>
+                    </div>
+                    <div class="friend-meta">
+                        <div class="friend-meta-item">
+                            <div class="meta-icon-comentarios">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 12H5v-2h14v2zm0-3H5V9h14v2zm0-3H5V6h14v2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <strong>${friend.reviews}</strong>
+                                <span>Reseñas</span>
+                            </div>
+                        </div>
+                        <div class="friend-meta-item">
+                            <div class="meta-icon-reputacion">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <strong>${friend.reputation}</strong>
+                                <span>Reseñas</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return card;
+            };
+
+            const updateFriendSection = (filteredFriends = friends) => {
+                friendGrid.innerHTML = '';
+                if (filteredFriends.length === 0) {
+                    friendsMessage.textContent = 'No se encontraron amigos.';
+                    friendsMessage.style.display = 'block';
+                    return;
+                }
+                friendsMessage.style.display = 'none';
+                filteredFriends.forEach(friend => {
+                    friendGrid.appendChild(renderFriendCard(friend));
+                });
+            };
+
+            const applySavedPhoto = () => {
+                const photoData = localStorage.getItem('profile_photo');
+                if (photoData) {
+                    profileAvatar.style.backgroundImage = `url('${photoData}')`;
+                    profileAvatar.style.backgroundSize = 'cover';
+                    profileAvatar.style.backgroundPosition = 'center';
+                    profileAvatar.style.backgroundRepeat = 'no-repeat';
+                    profileAvatar.style.color = 'transparent';
+                    profileInitial.style.opacity = '0';
+
+                    if (smallAvatar) {
+                        smallAvatar.style.backgroundImage = `url('${photoData}')`;
+                        smallAvatar.style.backgroundSize = 'cover';
+                        smallAvatar.style.backgroundPosition = 'center';
+                        smallAvatar.style.backgroundRepeat = 'no-repeat';
+                        smallAvatar.style.color = 'transparent';
+                    }
+                }
+            };
+
+            const applySavedTheme = () => {
+                const savedTheme = localStorage.getItem('profile_theme') || 'dark';
+                const isDark = savedTheme === 'dark';
+                if (themeToggle) themeToggle.checked = isDark;
+                if (themeLabel) themeLabel.textContent = isDark ? 'Oscuro' : 'Claro';
+                document.documentElement.dataset.theme = savedTheme;
+            };
+
+            const updatePrivacySelection = (privacyMode) => {
+                privacyOptions.forEach(option => {
+                    option.classList.toggle('active', option.dataset.value === privacyMode);
+                });
+                localStorage.setItem('profile_privacy', privacyMode);
+            };
+
+            const applySavedPrivacy = () => {
+                const savedPrivacy = localStorage.getItem('profile_privacy') || 'public';
+                if (savedPrivacy) {
+                    updatePrivacySelection(savedPrivacy);
+                }
+            };
+
+            const initSectionNavigation = () => {
+                navItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        setActiveNav(item);
+                        showSection(item.dataset.section);
+
+                        if (sidebar && sidebar.classList.contains('open')) {
+                            sidebar.classList.remove('open');
+                            overlay.classList.remove('show');
+                        }
+                    });
+                });
+            };
+
             if (menuMovilToggle && sidebar && overlay) {
                 menuMovilToggle.addEventListener('click', () => {
                     sidebar.classList.add('open');
@@ -209,23 +427,9 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                 });
             }
 
-            // Cambiar item activo para simular navegación
-            navItems.forEach(item => {
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    navItems.forEach(nav => nav.classList.remove('active'));
-                    item.classList.add('active');
-                    
-                    // Si estamos en móvil, cerramos el menú al hacer click en una opción
-                    if (sidebar && sidebar.classList.contains('open')) {
-                        sidebar.classList.remove('open');
-                        overlay.classList.remove('show');
-                    }
-                });
-            });
+            initSectionNavigation();
+            showSection('perfil');
 
-            // Guardar y cargar descripción en localStorage para simular persistencia
-            const inputDescripcion = document.getElementById('inputDescripcion');
             if (inputDescripcion) {
                 const descripcionGuardada = localStorage.getItem('user_description');
                 if (descripcionGuardada) {
@@ -242,6 +446,53 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                     }
                 });
             }
+
+            if (btnCambiarFoto && inputFotoPerfil) {
+                btnCambiarFoto.addEventListener('click', () => inputFotoPerfil.click());
+
+                inputFotoPerfil.addEventListener('change', () => {
+                    const file = inputFotoPerfil.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const imageUrl = event.target.result;
+                        localStorage.setItem('profile_photo', imageUrl);
+                        applySavedPhoto();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            if (themeToggle) {
+                themeToggle.addEventListener('change', () => {
+                    const selected = themeToggle.checked ? 'dark' : 'light';
+                    if (themeLabel) themeLabel.textContent = themeToggle.checked ? 'Oscuro' : 'Claro';
+                    document.documentElement.dataset.theme = selected;
+                    localStorage.setItem('profile_theme', selected);
+                });
+            }
+    
+            if (privacyOptions.length) {
+                privacyOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        updatePrivacySelection(option.dataset.value);
+                    });
+                });
+            }
+
+            if (buscarAmigos) {
+                buscarAmigos.addEventListener('input', () => {
+                    const searchValue = buscarAmigos.value.trim().toLowerCase();
+                    const filteredFriends = friends.filter(friend => friend.name.toLowerCase().includes(searchValue));
+                    updateFriendSection(filteredFriends);
+                });
+            }
+
+            updateFriendSection();
+            applySavedPhoto();
+            applySavedTheme();
+            applySavedPrivacy();
         });
     </script>
 </body>
