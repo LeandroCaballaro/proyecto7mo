@@ -112,6 +112,32 @@ class AuthService
         return $this->userModel->findByToken($token);
     }
 
+    /**
+     * Autentica o registra un usuario que inicia sesión mediante Google.
+     */
+    public function googleLogin(string $name, string $email): array
+    {
+        $email = trim($email);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['error' => 'El email no es válido'];
+        }
+
+        $user = $this->userModel->findByEmail($email);
+        if (!$user) {
+            // Registrar usuario nuevo con contraseña aleatoria
+            $randomPassword = bin2hex(random_bytes(16));
+            $hash = password_hash($randomPassword, PASSWORD_BCRYPT);
+            $userId = $this->userModel->create($name, $email, $hash);
+
+            // Asegurar reviewer asociado
+            $this->userModel->ensureReviewer($userId, $name);
+        } else {
+            $userId = (int) $user['id'];
+            $name = $user['name'];
+        }
+
+        return $this->buildSession($userId, $name, $email);
+    }
     // -------------------------------------------------------------------------
     // HELPER PRIVADO
     // -------------------------------------------------------------------------

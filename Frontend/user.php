@@ -1,10 +1,49 @@
 <?php
 session_start();
+// Si no está autenticado, redirigir al login
+if (empty($_SESSION['user'])) {
+    header('Location: /proyecto7mo/Frontend/login.php');
+    exit;
+}
 
-// Obtener datos del usuario logueado o usar fallback de la imagen
-$user_name = $_SESSION['user']['name'] ?? 'Usuario';
-$user_email = $_SESSION['user']['email'] ?? 'usuario@gmail.com';
+require_once __DIR__ . '/../Backend/models/Database.php';
+
+$user_name = $_SESSION['user']['name'];
+$user_email = $_SESSION['user']['email'];
+$user_id = $_SESSION['user']['id'] ?? null;
+
 $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
+
+$reputation = 0;
+$comments_count = 0;
+
+if ($user_id) {
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        // Cargar reputación real
+        $stmt = $db->prepare("SELECT reputation FROM reviewers WHERE user_id = ? LIMIT 1");
+        $stmt->execute([$user_id]);
+        $reviewer = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($reviewer) {
+            $reputation = (int) $reviewer['reputation'];
+        }
+        
+        // Contar reseñas hechas
+        $stmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+        $reviews_count = (int) $stmt->fetchColumn();
+        
+        // Contar respuestas a reseñas
+        $stmt = $db->prepare("SELECT COUNT(*) FROM review_responses WHERE user_id = ?");
+        $stmt->execute([$user_id]);
+        $responses_count = (int) $stmt->fetchColumn();
+        
+        $comments_count = $reviews_count + $responses_count;
+    } catch (Exception $e) {
+        // Mantener fallbacks silenciosos en caso de error de BD
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -144,7 +183,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-valor" id="statComentarios">128</span>
+                            <span class="stat-valor" id="statComentarios"><?= $comments_count ?></span>
                             <span class="stat-label">Comentarios</span>
                         </div>
                     </div>
@@ -158,7 +197,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                             </svg>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-valor" id="statReputacion">4.8</span>
+                            <span class="stat-valor" id="statReputacion"><?= $reputation ?></span>
                             <span class="stat-label">Reputación</span>
                         </div>
                     </div>
@@ -326,7 +365,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                             </div>
                             <div>
                                 <strong>${friend.reviews}</strong>
-                                <span>Reseñas</span>
+                                <span>Comentarios</span>
                             </div>
                         </div>
                         <div class="friend-meta-item">
@@ -337,7 +376,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
                             </div>
                             <div>
                                 <strong>${friend.reputation}</strong>
-                                <span>Reseñas</span>
+                                <span>Reputación</span>
                             </div>
                         </div>
                     </div>

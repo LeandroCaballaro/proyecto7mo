@@ -132,7 +132,15 @@ input::placeholder {
 .social-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.google-button-wrapper {
+  display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .divider {

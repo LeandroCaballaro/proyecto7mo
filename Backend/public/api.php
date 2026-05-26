@@ -40,6 +40,9 @@ if ($parts[0] === 'auth') {
         $auth->login();
     }
 
+    if ($sub === 'google' && $method === 'POST') {
+        $auth->googleLogin();
+    }
     if ($sub === 'logout' && $method === 'POST') {
         $auth->logout();
     }
@@ -64,14 +67,28 @@ if ($parts[0] === 'reviewers') {
 }
 
 // Reseñas
-if ($parts[0] === 'reviews' && $method === 'POST') {
-    $api->addReview();
+if ($parts[0] === 'reviews') {
+    if ($method === 'POST' && isset($parts[1], $parts[2]) && $parts[2] === 'responses' && is_numeric($parts[1])) {
+        $api->addReviewResponse((int) $parts[1]);
+    }
+    if ($method === 'GET' && isset($parts[1], $parts[2]) && $parts[2] === 'responses' && is_numeric($parts[1])) {
+        $api->reviewResponses((int) $parts[1]);
+    }
+    if ($method === 'POST' && count($parts) === 1) {
+        $api->addReview();
+    }
 }
 
 // Películas
 if ($parts[0] === 'movies') {
+    if ($method === 'POST' && count($parts) === 1) {
+        $api->createMovie();
+    }
     if (isset($parts[1], $parts[2]) && $parts[2] === 'reviews' && is_numeric($parts[1])) {
         $api->movieReviews((int) $parts[1]);
+    }
+    if (isset($parts[1]) && is_numeric($parts[1]) && !isset($parts[2])) {
+        $api->showMovie((int) $parts[1]);
     }
     if (!isset($parts[1]) || $parts[1] === '') {
         $api->index();

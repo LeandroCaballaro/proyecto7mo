@@ -1,6 +1,7 @@
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -10,8 +11,8 @@ body {
   background-repeat: no-repeat;  /* no se repita */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background-color: #1a1a2e;
-  margin: 0;
-  padding: 0;
+  min-height: 100vh;
+  padding: 20px;
 }
 body::before {
   content: "";
@@ -159,8 +160,36 @@ body::before {
 .social-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  width: 100%;
 }
+
+.google-button-wrapper {
+  display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+/* Estilos para el botón de Google */
+#g_id_signin {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+.google-button-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.google-button-wrapper div {
+  width: auto;
+}
+
 
 .btn-social {
   width: 100%;

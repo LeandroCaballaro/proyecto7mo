@@ -35,8 +35,13 @@ class Database
             genre VARCHAR(100),
             featured TINYINT(1) DEFAULT 0,
             description TEXT,
-            year INT
+            year INT,
+            user_id INT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $movieUserColumn = $this->pdo->query("SHOW COLUMNS FROM movies LIKE 'user_id'")->fetch(PDO::FETCH_ASSOC);
+        if (!$movieUserColumn) {
+            $this->pdo->exec("ALTER TABLE movies ADD COLUMN user_id INT NULL");
+        }
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -59,6 +64,15 @@ class Database
             rating TINYINT NOT NULL,
             comment TEXT,
             UNIQUE KEY uk_user_movie (user_id, movie_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $this->pdo->exec("CREATE TABLE IF NOT EXISTS review_responses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            review_id INT NOT NULL,
+            user_id INT NOT NULL,
+            rating TINYINT NOT NULL,
+            comment TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS genre_reputation (

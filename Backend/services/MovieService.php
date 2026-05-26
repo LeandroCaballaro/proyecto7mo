@@ -32,6 +32,33 @@ class MovieService
         return Movie::genres();
     }
 
+    public function getById($id)
+    {
+        return Movie::find($id);
+    }
+
+    public function createMovie($userId, $title, $genre, $year, $description)
+    {
+        $title = trim($title);
+        $genre = trim($genre);
+        $description = trim($description);
+        $year = (int) $year;
+
+        if ($title === '') {
+            return ['error' => 'El título es obligatorio'];
+        }
+        if ($year < 1800 || $year > (int) date('Y') + 1) {
+            return ['error' => 'El año de la película no es válido'];
+        }
+
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO movies (title, genre, featured, description, year, user_id) VALUES (?, ?, 0, ?, ?, ?)"
+        );
+        $stmt->execute([$title, $genre, $description, $year, (int) $userId]);
+
+        return ['ok' => true, 'movie_id' => (int) $this->pdo->lastInsertId()];
+    }
+
     public function getReviewers($limit = 10)
     {
         $limit = (int) $limit;
@@ -110,11 +137,60 @@ class MovieService
     public function getReviewsForMovie($movieId)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT r.rating, r.comment, u.name AS user_name FROM reviews r
+            "SELECT r.id, r.user_id, r.rating, r.comment, u.name AS user_name FROM reviews r
              JOIN users u ON u.id = r.user_id WHERE r.movie_id = ? ORDER BY r.id DESC"
         );
         $stmt->execute([(int) $movieId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getReviewResponses($reviewId)
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT rr.id, rr.rating, rr.comment, rr.created_at, u.name AS user_name FROM review_responses rr
+             JOIN users u ON u.id = rr.user_id WHERE rr.review_id = ? ORDER BY rr.created_at ASC"
+        );
+        $stmt->execute([(int) $reviewId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function addReviewResponse($userId, $reviewId, $rating, $comment)
+    {
+        $rating = (int) $rating;
+        if ($rating < 1 || $rating > 5) {
+            return ['error' => 'La calificación de la respuesta debe ser de 1 a 5'];
+        }
+
+        $stmt = $this->pdo->prepare("SELECT user_id, movie_id FROM reviews WHERE id = ?");
+        $stmt->execute([(int) $reviewId]);
+        $review = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$review) {
+            return ['error' => 'Reseña no encontrada'];
+        }
+        if ((int) $review['user_id'] === (int) $userId) {
+            return ['error' => 'No puedes responder tu propia reseña'];
+        }
+
+        $this->pdo->prepare(
+            "INSERT INTO review_responses (review_id, user_id, rating, comment) VALUES (?, ?, ?, ?)"
+        )->execute([(int) $reviewId, (int) $userId, $rating, trim($comment)]);
+
+        $points = 0;
+        if ($rating >= 4) {
+            $points = 3;
+            $movie = Movie::find((int) $review['movie_id']);
+            $genre = $movie['genre'] ?: 'General';
+
+            $this->pdo->prepare(
+                "INSERT INTO genre_reputation (user_id, genre, points) VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE points = points + ?"
+            )->execute([(int) $review['user_id'], $genre, $points, $points]);
+
+            $this->pdo->prepare("UPDATE reviewers SET reputation = reputation + ? WHERE user_id = ?")
+                ->execute([$points, (int) $review['user_id']]);
+        }
+
+        return ['ok' => true, 'positive' => $rating >= 4, 'points' => $points];
     }
 
     public function addReview($userId, $movieId, $rating, $comment)

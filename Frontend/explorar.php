@@ -27,17 +27,40 @@ function api_post($route, $data, $token = null)
 }
 
 $genre = $_GET['genre'] ?? '';
-$peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('movies');
 $msg = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['token'])) {
-    $res = api_post('reviews', [
-        'movie_id' => (int) ($_POST['movie_id'] ?? 0),
-        'rating' => (int) ($_POST['rating'] ?? 0),
-        'comment' => $_POST['comment'] ?? '',
-    ], $_SESSION['token']);
-    $msg = isset($res['ok']) ? 'Reseña publicada (+reputación por género)' : ($res['error'] ?? 'Error');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_SESSION['token'])) {
+        $msg = 'Debes iniciar sesión para publicar películas o responder reseñas.';
+    } else {
+        $action = $_POST['action'] ?? 'submit_review';
+
+        if ($action === 'create_movie') {
+            $res = api_post('movies', [
+                'title' => $_POST['title'] ?? '',
+                'genre' => $_POST['genre'] ?? '',
+                'year' => (int) ($_POST['year'] ?? 0),
+                'description' => $_POST['description'] ?? '',
+            ], $_SESSION['token']);
+            $msg = isset($res['ok']) ? 'Película publicada correctamente.' : ($res['error'] ?? 'Error al publicar película');
+        } elseif ($action === 'respond_review') {
+            $res = api_post('reviews/' . urlencode((int) ($_POST['review_id'] ?? 0)) . '/responses', [
+                'rating' => (int) ($_POST['rating'] ?? 0),
+                'comment' => $_POST['comment'] ?? '',
+            ], $_SESSION['token']);
+            $msg = isset($res['ok']) ? 'Respuesta enviada correctamente.' : ($res['error'] ?? 'Error al responder la reseña');
+        } else {
+            $res = api_post('reviews', [
+                'movie_id' => (int) ($_POST['movie_id'] ?? 0),
+                'rating' => (int) ($_POST['rating'] ?? 0),
+                'comment' => $_POST['comment'] ?? '',
+            ], $_SESSION['token']);
+            $msg = isset($res['ok']) ? 'Reseña publicada (+reputación por género)' : ($res['error'] ?? 'Error');
+        }
+    }
 }
+
+$peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('movies');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -91,6 +114,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['token'])) {
                 </select>
             </div>
 
+            <?php if (!empty($_SESSION['user'])): ?>
+                <div class="mb-8 rounded-xl border border-border bg-card p-6">
+                    <h2 class="text-xl font-semibold text-foreground mb-4">Publicar nueva película</h2>
+                    <form method="post" class="grid gap-4 lg:grid-cols-2">
+                        <input type="hidden" name="action" value="create_movie">
+                        <div>
+                            <label class="text-xs font-semibold text-muted-foreground">Título</label>
+                            <input type="text" name="title" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Nombre de la película">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-muted-foreground">Género</label>
+                            <input type="text" name="genre" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Ej. Acción, Drama">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-muted-foreground">Año</label>
+                            <input type="number" name="year" min="1880" max="2100" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="<?= date('Y') ?>" value="<?= date('Y') ?>">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-muted-foreground">Descripción</label>
+                            <input type="text" name="description" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Un breve resumen">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <button type="submit" class="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                                Publicar película
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            <?php endif; ?>
+
             <!-- Películas Grid -->
             <?php if (empty($peliculas)): ?>
                 <div class="text-center py-20 bg-card rounded-xl border border-border">
@@ -115,18 +168,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['token'])) {
                             </div>
 
                             <div class="mt-4">
+                                <?php
+                                $reviews = api_get('movies/' . urlencode((int) $p['id']) . '/reviews') ?: [];
+                                ?>
+                                <div class="mt-4 space-y-3 max-h-96 overflow-y-auto pr-2">
+                                    <h4 class="text-sm font-semibold text-foreground sticky top-0 bg-card z-10">Reseñas</h4>
+                                    <?php if (!empty($reviews)): ?>
+                                        <?php foreach ($reviews as $rev): ?>
+                                            <?php $responses = api_get('reviews/' . urlencode((int) $rev['id']) . '/responses') ?: []; ?>
+                                            <div class="rounded-xl border border-border bg-background p-4 text-sm space-y-4">
+                                                <div class="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <span class="font-semibold text-foreground"><?= htmlspecialchars($rev['user_name']) ?></span>
+                                                        <span class="text-yellow-400 text-xs ml-2"><?= str_repeat('★', (int) $rev['rating']) . str_repeat('☆', 5 - (int) $rev['rating']) ?></span>
+                                                    </div>
+                                                </div>
+                                                <p class="text-muted-foreground"><?= htmlspecialchars($rev['comment'] ?: 'Sin comentario') ?></p>
+
+                                                <?php if (!empty($_SESSION['user']) && $_SESSION['user']['id'] !== (int) $rev['user_id']): ?>
+                                                    <form method="post" class="space-y-3 rounded-lg border-2 border-primary bg-primary/5 p-4 mt-4">
+                                                        <input type="hidden" name="action" value="respond_review">
+                                                        <input type="hidden" name="review_id" value="<?= (int) $rev['id'] ?>">
+                                                        <div class="flex items-center gap-2 mb-3">
+                                                            <span class="text-lg">💬</span>
+                                                            <label class="block text-sm font-bold text-primary">Responde esta reseña</label>
+                                                        </div>
+                                                        <div class="space-y-2">
+                                                            <label class="text-xs font-semibold text-muted-foreground">Tu calificación:</label>
+                                                            <select name="rating" class="rounded border border-border bg-background text-foreground text-xs px-3 py-2 focus:ring-2 focus:ring-primary focus:outline-none w-full">
+                                                                <option value="">-- Selecciona una calificación --</option>
+                                                                <?php for ($i = 5; $i >= 1; $i--): ?>
+                                                                    <option value="<?= $i ?>"><?= str_repeat('★', $i) . str_repeat('☆', 5 - $i) ?> - <?= $i ?> estrella<?= $i > 1 ? 's' : '' ?></option>
+                                                                <?php endfor; ?>
+                                                            </select>
+                                                        </div>
+                                                        <div class="space-y-2">
+                                                            <label class="block text-xs font-semibold text-muted-foreground">Tu respuesta:</label>
+                                                            <textarea name="comment" placeholder="Comparte tu opinión sobre esta reseña..." required rows="4" class="w-full text-xs rounded border-2 border-border bg-background px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"></textarea>
+                                                        </div>
+                                                        <button type="submit" class="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 py-2 text-xs font-bold transition-colors">
+                                                            ✓ Publicar respuesta
+                                                        </button>
+                                                    </form>
+                                                <?php elseif (!empty($_SESSION['user']) && $_SESSION['user']['id'] === (int) $rev['user_id']): ?>
+                                                    <div class="rounded-lg border-2 border-secondary bg-secondary/5 p-3 text-xs text-muted-foreground">
+                                                        ℹ️ No puedes responder tu propia reseña
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <div class="rounded-xl border border-border bg-card p-3 mt-4">
+                                                    <h5 class="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-bold">Respuestas (<?= count($responses) ?>)</h5>
+                                                    <?php if (!empty($responses)): ?>
+                                                        <?php foreach ($responses as $resp): ?>
+                                                            <div class="mb-3 rounded-lg border border-border bg-background p-3 text-xs">
+                                                                <div class="flex items-center justify-between gap-3 mb-1">
+                                                                    <span class="font-semibold text-foreground"><?= htmlspecialchars($resp['user_name']) ?></span>
+                                                                    <span class="text-yellow-400"><?= str_repeat('★', (int) $resp['rating']) . str_repeat('☆', 5 - (int) $resp['rating']) ?></span>
+                                                                </div>
+                                                                <p class="text-muted-foreground"><?= htmlspecialchars($resp['comment'] ?: 'Sin comentario') ?></p>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    <?php else: ?>
+                                                        <p class="text-xs text-muted-foreground italic">Sé el primero en responder...</p>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <p class="text-xs text-muted-foreground">Aún no hay reseñas para esta película.</p>
+                                    <?php endif; ?>
+                                </div>
+
                                 <?php if (!empty($_SESSION['user'])): ?>
                                     <form method="post" class="mt-4 pt-4 border-t border-border space-y-3">
+                                        <input type="hidden" name="action" value="submit_review">
                                         <input type="hidden" name="movie_id" value="<?= (int) $p['id'] ?>">
                                         <div class="flex items-center justify-between">
-                                            <label class="label">Calificación:</label>
-                                            <select name="rating" class="rating">
+                                            <label class="text-xs font-semibold text-muted-foreground">Calificación:</label>
+                                            <select name="rating" class="rounded border border-border bg-background text-foreground text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none">
                                                 <?php for ($i = 5; $i >= 1; $i--): ?>
-                                                    <option value="<?= $i ?>" class="stars"><?= str_repeat('★', $i) . str_repeat('☆', 5 - $i) ?></option>
+                                                    <option value="<?= $i ?>"><?= str_repeat('★', $i) . str_repeat('☆', 5 - $i) ?></option>
                                                 <?php endfor; ?>
                                             </select>
                                         </div>
-                                        <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="comments">
+                                        <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="w-full text-xs rounded border border-border bg-background px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+
                                         <button type="submit" class="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 py-2 text-xs font-semibold transition-colors">
                                             Publicar Reseña
                                         </button>
