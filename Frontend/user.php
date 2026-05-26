@@ -107,16 +107,6 @@ if ($user_id) {
                     <span class="nav-label">Mi actividad</span>
                 </a>
 
-                <!-- Amigos -->
-                <a href="#" class="nav-item" data-section="amigos">
-                    <span class="icon-circle icon-sharing">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                        </svg>
-                    </span>
-                    <span class="nav-label">Amigos</span>
-                </a>
-
                 <!-- Configuración -->
                 <a href="#" class="nav-item" data-section="config">
                     <span class="icon-circle icon-privacy">
@@ -244,24 +234,6 @@ if ($user_id) {
                 </div>
             </section>
 
-            <section id="amigos" class="perfil-seccion-central content-section section-hidden">
-                <div class="section-card">
-                    <div class="friends-header">
-                            <h2>Amigos</h2>
-                    </div>
-                    <div class="friends-filter-row">
-                        <div class="search-wrapper">
-                            <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true">
-                                <path fill="currentColor" d="M21.71 20.29l-3.4-3.39A8.93 8.93 0 0 0 19 10a9 9 0 1 0-9 9 8.93 8.93 0 0 0 6.9-3.69l3.39 3.4a1 1 0 0 0 1.42-1.42zM4 10a6 6 0 1 1 6 6 6 6 0 0 1-6-6z"/>
-                            </svg>
-                            <input id="buscarAmigos" type="search" class="friends-search" placeholder="Buscar amigos" aria-label="Buscar amigos">
-                        </div>
-                    </div>
-                    <div class="empty-state" id="friendsMessage">Aún no tienes amigos.</div>
-                    <div class="friend-grid" id="friendGrid"></div>
-                </div>
-            </section>
-
             <section id="config" class="perfil-seccion-central content-section section-hidden">
                 <div class="section-card">
                     <div class="section-header">
@@ -290,8 +262,8 @@ if ($user_id) {
                             </div>
                             <div class="privacy-options" id="privacyOptions">
                                 <button type="button" class="privacy-option" data-value="public">Público</button>
-                                <button type="button" class="privacy-option" data-value="friends">Solo amigos</button>
                                 <button type="button" class="privacy-option" data-value="private">Privado</button>
+                                <button type="button" class="privacy-option" data-value="friends">Solo amigos</button>
                             </div>
                         </div>
                     </div>
@@ -321,21 +293,7 @@ if ($user_id) {
             const themeToggle = document.getElementById('themeToggle');
             const themeLabel = document.getElementById('themeLabel');
             const privacyOptions = document.querySelectorAll('.privacy-option');
-            const buscarAmigos = document.getElementById('buscarAmigos');
-            const friendGrid = document.getElementById('friendGrid');
-            const friendsMessage = document.getElementById('friendsMessage');
-
             const reviews = [];
-            const friends = [
-                {
-                    name: 'Juan Pérez',
-                    description: 'Fanático del cine con ojo crítico en thrillers y dramas.',
-                    reputation: '4.9',
-                    reviews: 18,
-                    initials: 'JP',
-                    photo: null
-                }
-            ];
 
             const showSection = (sectionId) => {
                 sections.forEach(section => {
@@ -345,56 +303,6 @@ if ($user_id) {
 
             const setActiveNav = (activeItem) => {
                 navItems.forEach(nav => nav.classList.toggle('active', nav === activeItem));
-            };
-
-            const renderFriendCard = (friend) => {
-                const card = document.createElement('div');
-                card.className = 'friend-card';
-                card.innerHTML = `
-                    <div class="friend-avatar">${friend.photo ? `<img src="${friend.photo}" alt="${friend.name}" />` : friend.initials}</div>
-                    <div class="friend-info">
-                        <strong>${friend.name}</strong>
-                        <span>${friend.description}</span>
-                    </div>
-                    <div class="friend-meta">
-                        <div class="friend-meta-item">
-                            <div class="meta-icon-comentarios">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 12H5v-2h14v2zm0-3H5V9h14v2zm0-3H5V6h14v2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>${friend.reviews}</strong>
-                                <span>Comentarios</span>
-                            </div>
-                        </div>
-                        <div class="friend-meta-item">
-                            <div class="meta-icon-reputacion">
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>${friend.reputation}</strong>
-                                <span>Reputación</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                return card;
-            };
-
-            const updateFriendSection = (filteredFriends = friends) => {
-                friendGrid.innerHTML = '';
-                if (filteredFriends.length === 0) {
-                    friendsMessage.textContent = 'No se encontraron amigos.';
-                    friendsMessage.style.display = 'block';
-                    return;
-                }
-                friendsMessage.style.display = 'none';
-                filteredFriends.forEach(friend => {
-                    friendGrid.appendChild(renderFriendCard(friend));
-                });
             };
 
             const applySavedPhoto = () => {
@@ -520,15 +428,6 @@ if ($user_id) {
                 });
             }
 
-            if (buscarAmigos) {
-                buscarAmigos.addEventListener('input', () => {
-                    const searchValue = buscarAmigos.value.trim().toLowerCase();
-                    const filteredFriends = friends.filter(friend => friend.name.toLowerCase().includes(searchValue));
-                    updateFriendSection(filteredFriends);
-                });
-            }
-
-            updateFriendSection();
             applySavedPhoto();
             applySavedTheme();
             applySavedPrivacy();
