@@ -16,6 +16,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 
 $reputation = 0;
 $comments_count = 0;
+$user_reviews = [];
 
 if ($user_id) {
     try {
@@ -40,6 +41,17 @@ if ($user_id) {
         $responses_count = (int) $stmt->fetchColumn();
         
         $comments_count = $reviews_count + $responses_count;
+        // Obtener reseñas del usuario
+$stmt = $db->prepare("
+SELECT reviews.comment, movies.title
+    FROM reviews
+    INNER JOIN movies ON reviews.movie_id = movies.id
+    WHERE reviews.user_id = ?
+    ORDER BY reviews.id DESC
+");
+$stmt->execute([$user_id]);
+
+$user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // Mantener fallbacks silenciosos en caso de error de BD
     }
@@ -57,6 +69,90 @@ if ($user_id) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style/styles.css">
     <link rel="stylesheet" href="style/user.css">
+    <style>
+
+.edit-modal{
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.6);
+
+    justify-content:center;
+    align-items:center;
+
+    z-index:9999;
+}
+
+.edit-modal.show{
+    display:flex;
+}
+
+.edit-modal-content{
+    background:#1e1e1e;
+    padding:30px;
+    border-radius:12px;
+    width:350px;
+
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.edit-modal-content input,
+.edit-modal-content textarea{
+    width:100%;
+    padding:10px;
+}
+/* ===== TEMA CLARO ===== */
+
+:root[data-theme="light"] body{
+    background:#f5f5f5;
+    color:#111;
+}
+
+:root[data-theme="light"] .section-card,
+:root[data-theme="light"] .sidebar-estatico,
+:root[data-theme="light"] .edit-modal-content{
+    background:#ffffff;
+    color:#111;
+}
+
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea{
+    background:#f0f0f0;
+    color:#111;
+}
+
+/* ===== TEMA OSCURO ===== */
+
+:root[data-theme="dark"] body{
+    background:#0f0f0f;
+    color:white;
+}
+
+/* ===== BOTONES PRIVACIDAD ===== */
+
+.privacy-option{
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:#2a2a2a;
+    color:white;
+    transition:0.3s;
+}
+
+.privacy-option.active{
+    background:#6c63ff;
+    color:white;
+    transform:scale(1.05);
+}
+
+
+</style>
 </head>
 <body class="perfil-body">
     <!-- Contenedor Principal Split-Screen -->
@@ -161,8 +257,13 @@ if ($user_id) {
                 </div>
 
                 <!-- Nombre y Correo del Usuario -->
-                <h1 class="perfil-nombre"><?= htmlspecialchars($user_name) ?></h1>
+<h1 class="perfil-nombre" id="profileName">
+    <?= htmlspecialchars($user_name) ?>
+</h1>
                 <p class="perfil-correo"><?= htmlspecialchars($user_email) ?></p>
+                <button class="edit-profile-btn" id="editProfileBtn">
+                    Editar perfil
+                </button>
 
                 <!-- Estadísticas del usuario -->
                 <div class="stats-perfil-container">
@@ -202,25 +303,53 @@ if ($user_id) {
                                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </span>
-                        <input type="text" class="descripcion-input" id="inputDescripcion" placeholder="Agregar descripción" maxlength="100">
+<input type="text"
+       class="descripcion-input"
+       id="profileDescription"
+       placeholder="Agregar descripción"
+       maxlength="100">
                     </div>
                 </div>
 
             </section>
 
-            <section id="resenas" class="perfil-seccion-central content-section section-hidden">
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>Mis reseñas</h2>
-                        <p class="section-description">Aquí verás las películas y series a las que ya les hiciste una reseña.</p>
+<section id="resenas" class="perfil-seccion-central content-section section-hidden">
+
+    <div class="section-card">
+
+        <div class="section-header">
+            <h2>Mis reseñas</h2>
+            <p class="section-description">
+                Aquí verás las películas y series que reseñaste.
+            </p>
+        </div>
+
+        <div class="review-list" id="reviewList">
+
+            <?php if (!empty($user_reviews)): ?>
+
+                <?php foreach ($user_reviews as $review): ?>
+
+                    <div class="review-card">
+                        <h3><?= htmlspecialchars($review['title']) ?></h3>
+                        <p><?= htmlspecialchars($review['comment']) ?></p>
                     </div>
-                    <div class="review-list" id="reviewList">
-                        <div class="empty-state">
-                            <p>Todavía no se han hecho reseñas.</p>
-                        </div>
-                    </div>
+
+                <?php endforeach; ?>
+
+            <?php else: ?>
+
+                <div class="empty-state">
+                    <p>Todavía no se han hecho reseñas.</p>
                 </div>
-            </section>
+
+            <?php endif; ?>
+
+        </div>
+
+    </div>
+
+</section>
 
             <section id="actividad" class="perfil-seccion-central content-section section-hidden">
                 <div class="section-card">
@@ -228,9 +357,17 @@ if ($user_id) {
                         <h2>Mi actividad</h2>
                         <p class="section-description">Revisa tu actividad reciente en NexoHub.</p>
                     </div>
-                    <div class="empty-state">
-                        <p>Aquí aparecerán próximas actualizaciones de tu actividad.</p>
-                    </div>
+<div class="activity-list">
+
+    <div class="activity-card">
+        <p>Has realizado <?= $comments_count ?> interacciones.</p>
+    </div>
+
+    <div class="activity-card">
+        <p>Tu reputación actual es de <?= $reputation ?> puntos.</p>
+    </div>
+
+</div>
                 </div>
             </section>
 
@@ -276,7 +413,23 @@ if ($user_id) {
 
     <!-- Overlay móvil para cerrar el menú lateral -->
     <div class="sidebar-overlay-movil" id="sidebarOverlay"></div>
+<div class="edit-modal" id="editModal">
 
+    <div class="edit-modal-content">
+
+        <h2>Editar perfil</h2>
+
+<input type="text" id="editName" placeholder="Nuevo nombre">
+
+
+<textarea id="editDescription" placeholder="Nueva descripción"></textarea>
+<button type="button" id="saveProfileChanges">
+    Guardar cambios
+</button>
+
+    </div>
+
+</div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const menuMovilToggle = document.getElementById('menuMovilToggle');
@@ -284,7 +437,7 @@ if ($user_id) {
             const overlay = document.getElementById('sidebarOverlay');
             const navItems = document.querySelectorAll('.nav-item');
             const sections = document.querySelectorAll('.content-section');
-            const inputDescripcion = document.getElementById('inputDescripcion');
+const inputDescripcion = document.getElementById('profileDescription');
             const btnCambiarFoto = document.getElementById('btnCambiarFoto');
             const inputFotoPerfil = document.getElementById('inputFotoPerfil');
             const profileAvatar = document.getElementById('profileAvatar');
@@ -294,6 +447,14 @@ if ($user_id) {
             const themeLabel = document.getElementById('themeLabel');
             const privacyOptions = document.querySelectorAll('.privacy-option');
             const reviews = [];
+            const editProfileBtn = document.getElementById('editProfileBtn');
+            const editModal = document.getElementById('editModal');
+            const saveProfileChanges = document.getElementById('saveProfileChanges');
+const editName = document.getElementById('editName');
+const editDescription = document.getElementById('editDescription');
+
+const profileName = document.getElementById('profileName');
+const profileDescription = document.getElementById('profileDescription');
 
             const showSection = (sectionId) => {
                 sections.forEach(section => {
@@ -431,7 +592,52 @@ if ($user_id) {
             applySavedPhoto();
             applySavedTheme();
             applySavedPrivacy();
+            const savedName = localStorage.getItem('profile_name');
+const savedDescription = localStorage.getItem('profile_description');
+
+if(savedName){
+    profileName.textContent = savedName;
+}
+
+if(savedDescription){
+    profileDescription.value = savedDescription;
+}
+
+if(saveProfileChanges){
+
+    saveProfileChanges.addEventListener('click', () => {
+
+        const newName = editName.value.trim();
+        const newDescription = editDescription.value.trim();
+
+        if(newName){
+            profileName.textContent = newName;
+            localStorage.setItem('profile_name', newName);
+        }
+
+        if(newDescription){
+            profileDescription.value = newDescription;
+            localStorage.setItem('profile_description', newDescription);
+        }
+
+        editModal.classList.remove('show');
+
+    });
+
+}
+            if (editProfileBtn && editModal) {
+
+editProfileBtn.addEventListener('click', () => {
+
+    console.log('CLICK FUNCIONA');
+
+    editModal.classList.toggle('show');
+
+});
+
+}
         });
     </script>
+    
 </body>
 </html>
