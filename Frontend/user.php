@@ -44,6 +44,7 @@ if ($user_id) {
         // Mantener fallbacks silenciosos en caso de error de BD
     }
 }
+echo "CAMBIO_DE_PRUEBA";
 ?>
 <!DOCTYPE html>
 <html lang="es">
