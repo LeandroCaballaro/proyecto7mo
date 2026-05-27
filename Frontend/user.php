@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// ─── MANEJO DE PETICIONES AJAX ────────────────────────────────────────────────
+// manejo de peticiones ajax
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
     require_once __DIR__ . '/../Backend/models/Database.php';
     header('Content-Type: application/json');
@@ -9,26 +9,28 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH
     $action  = $_POST['action'] ?? $_GET['action'] ?? '';
     $session = $_SESSION['user'] ?? null;
 
-    if (!$session) { echo json_encode(['ok' => false, 'msg' => 'No autenticado']); exit; }
+    if (!$session) { 
+        echo json_encode(['ok' => false, 'msg' => 'no autenticado']); 
+        exit; 
+    }
 
     $user_id = $session['id'];
     $db      = Database::getInstance()->getConnection();
+    
+    // actualizar perfil
     if ($action === 'update_profile') {
         $new_name = trim($_POST['name'] ?? '');
         $new_desc = trim($_POST['description'] ?? '');
 
         try {
-            // Asegurarse de que la columna description existe en users
             if ($new_name !== '') {
                 $db->prepare("UPDATE users SET name = ? WHERE id = ?")->execute([$new_name, $user_id]);
                 $_SESSION['user']['name'] = $new_name;
             }
             if ($new_desc !== '') {
-                // Intentar actualizar si la columna no existe, la creamos
                 try {
                     $db->prepare("UPDATE users SET description = ? WHERE id = ?")->execute([$new_desc, $user_id]);
                 } catch (\PDOException $ex) {
-                    // Si falta la columna, la añadimos y reintentamos
                     $db->exec("ALTER TABLE users ADD COLUMN description VARCHAR(150) DEFAULT ''");
                     $db->prepare("UPDATE users SET description = ? WHERE id = ?")->execute([$new_desc, $user_id]);
                 }
@@ -40,15 +42,18 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH
         exit;
     }
 
+    // subir foto de perfil
     if ($action === 'upload_photo') {
         $file = $_FILES['photo'] ?? null;
         if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
-            echo json_encode(['ok' => false, 'msg' => 'Error al subir archivo']); exit;
+            echo json_encode(['ok' => false, 'msg' => 'error al subir archivo']); 
+            exit;
         }
 
         $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (!in_array($file['type'], $allowed)) {
-            echo json_encode(['ok' => false, 'msg' => 'Tipo de archivo no permitido']); exit;
+            echo json_encode(['ok' => false, 'msg' => 'tipo de archivo no permitido']); 
+            exit;
         }
 
         $dir = __DIR__ . '/uploads/avatars/';
@@ -68,36 +73,61 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH
             }
             echo json_encode(['ok' => true, 'url' => $url]);
         } else {
-            echo json_encode(['ok' => false, 'msg' => 'No se pudo mover el archivo']);
+            echo json_encode(['ok' => false, 'msg' => 'no se pudo mover el archivo']);
         }
         exit;
     }
+
+    // obtener reseñas del usuario
     if ($action === 'get_reviews') {
         try {
-            // Intentamos un JOIN generico
+            // consulta con join a movies y series
             $stmt = $db->prepare("
-                SELECT r.id,
-                       r.rating,
-                       r.comment,
-                       r.created_at,
-                       COALESCE(m.title, s.title, r.media_title, 'Sin título') AS titulo,
-                       COALESCE(m.poster_url, s.poster_url, r.poster_url, '') AS poster
+                SELECT 
+                    r.id,
+                    r.rating,
+                    r.comment,
+                    r.created_at,
+                    r.media_title,
+                    r.poster_url,
+                    COALESCE(m.title, s.title, r.media_title, 'sin titulo') AS titulo,
+                    COALESCE(m.poster_url, s.poster_url, r.poster_url, '') AS poster
                 FROM reviews r
-                LEFT JOIN movies  m ON m.id = r.movie_id
-                LEFT JOIN series  s ON s.id = r.series_id
+                LEFT JOIN movies m ON m.id = r.movie_id AND r.movie_id IS NOT NULL
+                LEFT JOIN series s ON s.id = r.series_id AND r.series_id IS NOT NULL
                 WHERE r.user_id = ?
                 ORDER BY r.created_at DESC
             ");
             $stmt->execute([$user_id]);
             $reviews = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            echo json_encode(['ok' => true, 'reviews' => $reviews]);
+            
+            // formatear fechas
+            foreach ($reviews as &$review) {
+                if ($review['created_at']) {
+                    $date = new \DateTime($review['created_at']);
+                    $review['formatted_date'] = $date->format('d/m/Y');
+                } else {
+                    $review['formatted_date'] = 'fecha desconocida';
+                }
+                $review['rating_stars'] = round($review['rating'] ?? 0);
+                $review['comment'] = $review['comment'] ?? 'sin comentario';
+            }
+            
+            echo json_encode(['ok' => true, 'reviews' => $reviews, 'count' => count($reviews)]);
         } catch (\Exception $e) {
-            // Consulta de fallback sin JOINs
+            // fallback sin joins por si no existen las tablas movies o series
             try {
-                $stmt = $db->prepare("SELECT id, rating, comment, created_at FROM reviews WHERE user_id = ? ORDER BY created_at DESC");
+                $stmt = $db->prepare("
+                    SELECT 
+                        id, rating, comment, created_at, media_title, poster_url,
+                        DATE_FORMAT(created_at, '%d/%m/%Y') as formatted_date
+                    FROM reviews 
+                    WHERE user_id = ? 
+                    ORDER BY created_at DESC
+                ");
                 $stmt->execute([$user_id]);
                 $reviews = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-                echo json_encode(['ok' => true, 'reviews' => $reviews]);
+                echo json_encode(['ok' => true, 'reviews' => $reviews, 'count' => count($reviews)]);
             } catch (\Exception $e2) {
                 echo json_encode(['ok' => false, 'msg' => $e2->getMessage(), 'reviews' => []]);
             }
@@ -105,47 +135,132 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH
         exit;
     }
 
+    // obtener actividad del usuario
     if ($action === 'get_activity') {
         $activity = [];
+        
+        // obtener reseñas
         try {
-            // Reseñas
             $stmt = $db->prepare("
-                SELECT 'review' AS tipo, r.created_at,
-                       CONCAT('Escribiste una reseña') AS detalle,
-                       COALESCE(m.title, s.title, r.media_title, 'un contenido') AS titulo
+                SELECT 
+                    'review' AS tipo, 
+                    r.created_at,
+                    CONCAT('escribiste una reseña sobre ', COALESCE(m.title, s.title, r.media_title, 'un contenido')) AS detalle,
+                    COALESCE(m.title, s.title, r.media_title, '') AS titulo,
+                    r.rating
                 FROM reviews r
                 LEFT JOIN movies m ON m.id = r.movie_id
                 LEFT JOIN series s ON s.id = r.series_id
                 WHERE r.user_id = ?
-                ORDER BY r.created_at DESC LIMIT 10
+                ORDER BY r.created_at DESC 
+                LIMIT 20
             ");
             $stmt->execute([$user_id]);
-            $activity = array_merge($activity, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+            $reviews_activity = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $activity = array_merge($activity, $reviews_activity);
         } catch (\Exception $e) {
             try {
-                $stmt = $db->prepare("SELECT 'review' AS tipo, created_at, 'Escribiste una reseña' AS detalle, '' AS titulo FROM reviews WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
+                $stmt = $db->prepare("
+                    SELECT 
+                        'review' AS tipo, 
+                        created_at, 
+                        CONCAT('escribiste una reseña sobre ', media_title) AS detalle,
+                        media_title AS titulo,
+                        rating
+                    FROM reviews 
+                    WHERE user_id = ? 
+                    ORDER BY created_at DESC 
+                    LIMIT 20
+                ");
                 $stmt->execute([$user_id]);
-                $activity = array_merge($activity, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+                $reviews_activity = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $activity = array_merge($activity, $reviews_activity);
             } catch (\Exception $e2) {}
         }
+        
+        // obtener respuestas a reseñas
         try {
-            // Respuestas
-            $stmt = $db->prepare("SELECT 'response' AS tipo, created_at, 'Respondiste a una reseña' AS detalle, '' AS titulo FROM review_responses WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
+            $stmt = $db->prepare("
+                SELECT 
+                    'response' AS tipo, 
+                    created_at, 
+                    CONCAT('respondiste a una reseña') AS detalle,
+                    '' AS titulo,
+                    NULL AS rating
+                FROM review_responses 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC 
+                LIMIT 20
+            ");
             $stmt->execute([$user_id]);
-            $activity = array_merge($activity, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+            $responses = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $activity = array_merge($activity, $responses);
         } catch (\Exception $e) {}
 
-        // Ordenar por fecha desc
-        usort($activity, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
-        echo json_encode(['ok' => true, 'activity' => array_slice($activity, 0, 15)]);
+        // ordenar por fecha descendente
+        usort($activity, function($a, $b) {
+            return strtotime($b['created_at']) - strtotime($a['created_at']);
+        });
+        
+        // formatear fechas
+        foreach ($activity as &$item) {
+            if ($item['created_at']) {
+                $date = new \DateTime($item['created_at']);
+                $item['formatted_date'] = $date->format('d/m/Y H:i');
+                $item['time_ago'] = time_ago($date);
+            } else {
+                $item['formatted_date'] = 'fecha desconocida';
+                $item['time_ago'] = '';
+            }
+        }
+        
+        echo json_encode(['ok' => true, 'activity' => array_slice($activity, 0, 20)]);
         exit;
     }
 
-    echo json_encode(['ok' => false, 'msg' => 'Acción desconocida']);
+    // eliminar reseña
+    if ($action === 'delete_review') {
+        $review_id = $_POST['review_id'] ?? 0;
+        
+        if (!$review_id) {
+            echo json_encode(['ok' => false, 'msg' => 'id de reseña no valido']);
+            exit;
+        }
+        
+        try {
+            // verificar que la reseña pertenezca al usuario
+            $stmt = $db->prepare("DELETE FROM reviews WHERE id = ? AND user_id = ?");
+            $stmt->execute([$review_id, $user_id]);
+            
+            if ($stmt->rowCount() > 0) {
+                echo json_encode(['ok' => true, 'msg' => 'reseña eliminada correctamente']);
+            } else {
+                echo json_encode(['ok' => false, 'msg' => 'no se encontro la reseña o no tienes permiso']);
+            }
+        } catch (\Exception $e) {
+            echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    echo json_encode(['ok' => false, 'msg' => 'accion desconocida']);
     exit;
 }
 
-// RENDERIZADO NORMAL DE LA pagina 
+// funcion para mostrar tiempo relativo (ej: "hace 2 horas")
+function time_ago($datetime) {
+    $now = new \DateTime();
+    $diff = $now->diff($datetime);
+    
+    if ($diff->y > 0) return 'hace ' . $diff->y . ' año' . ($diff->y > 1 ? 's' : '');
+    if ($diff->m > 0) return 'hace ' . $diff->m . ' mes' . ($diff->m > 1 ? 'es' : '');
+    if ($diff->d > 0) return 'hace ' . $diff->d . ' día' . ($diff->d > 1 ? 's' : '');
+    if ($diff->h > 0) return 'hace ' . $diff->h . ' hora' . ($diff->h > 1 ? 's' : '');
+    if ($diff->i > 0) return 'hace ' . $diff->i . ' minuto' . ($diff->i > 1 ? 's' : '');
+    return 'hace un momento';
+}
+
+// si no hay sesion activa redirigir al login
 if (empty($_SESSION['user'])) {
     header('Location: /proyecto7mo/Frontend/login.php');
     exit;
@@ -160,6 +275,8 @@ $user_id    = $_SESSION['user']['id'] ?? null;
 $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 
 $reputation     = 0;
+$reviews_count  = 0;
+$responses_count = 0;
 $comments_count = 0;
 $user_avatar    = '';
 $user_desc      = '';
@@ -168,24 +285,29 @@ if ($user_id) {
     try {
         $db = Database::getInstance()->getConnection();
 
-        // reputacion
+        // obtener reputacion del usuario
         $stmt = $db->prepare("SELECT reputation FROM reviewers WHERE user_id = ? LIMIT 1");
         $stmt->execute([$user_id]);
         $reviewer = $stmt->fetch(\PDO::FETCH_ASSOC);
         if ($reviewer) $reputation = (int) $reviewer['reputation'];
 
-        // Conteo comentarios
+        // contar reseñas
         $stmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE user_id = ?");
         $stmt->execute([$user_id]);
         $reviews_count = (int) $stmt->fetchColumn();
 
-        $stmt = $db->prepare("SELECT COUNT(*) FROM review_responses WHERE user_id = ?");
-        $stmt->execute([$user_id]);
-        $responses_count = (int) $stmt->fetchColumn();
+        // contar respuestas
+        try {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM review_responses WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $responses_count = (int) $stmt->fetchColumn();
+        } catch (\Exception $e) {
+            $responses_count = 0;
+        }
 
         $comments_count = $reviews_count + $responses_count;
 
-        // Avatar y descripcion (columnas opcionales)
+        // obtener avatar y descripcion
         try {
             $stmt = $db->prepare("SELECT avatar, description FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$user_id]);
@@ -194,9 +316,13 @@ if ($user_id) {
                 $user_avatar = $udata['avatar'] ?? '';
                 $user_desc   = $udata['description'] ?? '';
             }
-        } catch (\Exception $e) { /* columnas aún no creadas */ }
+        } catch (\Exception $e) { 
+            // si las columnas no existen no pasa nada
+        }
 
-    } catch (\Exception $e) { /* fallback silencioso */ }
+    } catch (\Exception $e) { 
+        // fallback silencioso por si hay error
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -210,11 +336,211 @@ if ($user_id) {
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style/styles.css">
     <link rel="stylesheet" href="style/user.css">
+    <style>
+        /* estilos para las tarjetas de reseñas */
+        .review-card {
+            display: flex;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--card-bg, #1e1e2e);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .review-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .review-poster {
+            flex-shrink: 0;
+            width: 80px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #2a2a3a;
+        }
+        
+        .review-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .no-poster {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .review-content {
+            flex: 1;
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .review-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+        }
+        
+        .review-rating {
+            color: gold;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+        }
+        
+        .review-comment {
+            color: #ccc;
+            line-height: 1.5;
+            margin: 0.5rem 0;
+        }
+        
+        .review-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        .review-date {
+            color: #888;
+        }
+        
+        .delete-review-btn {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #dc3545;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .delete-review-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+        
+        /* estilos para los items de actividad */
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: background 0.2s;
+        }
+        
+        .activity-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .act-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .act-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: #667eea;
+        }
+        
+        .act-text {
+            flex: 1;
+            color: #e0e0e0;
+        }
+        
+        .act-text b {
+            color: white;
+        }
+        
+        .act-text em {
+            color: #667eea;
+            font-style: normal;
+            font-weight: 500;
+        }
+        
+        .act-date {
+            font-size: 0.75rem;
+            color: #888;
+            flex-shrink: 0;
+        }
+        
+        .act-time-ago {
+            font-size: 0.7rem;
+            color: #666;
+        }
+        
+        /* estado vacio y loading */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+        
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .loading-placeholder {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .rating-stars {
+            display: inline-flex;
+            gap: 2px;
+        }
+    </style>
 </head>
 <body class="perfil-body">
 <div class="perfil-container">
 
-     <!-- SIDEBAR -->
+    <!-- barra lateral de navegacion -->
     <aside class="sidebar-estatico">
         <div class="sidebar-brand">
             <a href="/proyecto7mo/index.php" class="brand-link">
@@ -254,12 +580,12 @@ if ($user_id) {
         </nav>
     </aside>
 
-    <!--  CONTENIDO PRINCIPAL  -->
+    <!-- contenido principal -->
     <main class="contenido-perfil">
 
         <header class="header-interno">
             <div class="header-seccion-titulo">
-                <button class="btn-toggle-movil" id="menuMovilToggle" aria-label="Abrir menú">
+                <button class="btn-toggle-movil" id="menuMovilToggle" aria-label="abrir menu">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
@@ -277,9 +603,8 @@ if ($user_id) {
             </div>
         </header>
 
-        <!--  seccion: MI PERFIL  -->
+        <!-- seccion: mi perfil -->
         <section id="perfil" class="perfil-seccion-central content-section">
-
             <div class="avatar-grande-container">
                 <div class="avatar-grande" id="profileAvatar"
                      <?php if ($user_avatar): ?>
@@ -287,7 +612,7 @@ if ($user_id) {
                      <?php endif; ?>>
                     <span id="profileInitial" <?= $user_avatar ? 'style="opacity:0"' : '' ?>><?= $user_initial ?></span>
                 </div>
-                <button class="btn-cambiar-foto" id="btnCambiarFoto" type="button" title="Cambiar foto de perfil">
+                <button class="btn-cambiar-foto" id="btnCambiarFoto" type="button" title="cambiar foto de perfil">
                     <div class="camara-overlay">
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
@@ -336,10 +661,9 @@ if ($user_id) {
                            value="<?= htmlspecialchars($user_desc) ?>">
                 </div>
             </div>
-
         </section>
 
-        <!--  seccion: MIS RESEÑAS  -->
+        <!-- seccion: mis reseñas -->
         <section id="resenas" class="perfil-seccion-central content-section section-hidden">
             <div class="section-card">
                 <div class="section-header">
@@ -347,12 +671,12 @@ if ($user_id) {
                     <p class="section-description">Aquí verás las películas y series a las que ya les hiciste una reseña.</p>
                 </div>
                 <div class="review-list" id="reviewList">
-                    <div class="loading-placeholder">Cargando reseñas…</div>
+                    <div class="loading-placeholder">Cargando reseñas...</div>
                 </div>
             </div>
         </section>
 
-        <!--  seccion: MI ACTIVIDAD  -->
+        <!-- seccion: mi actividad -->
         <section id="actividad" class="perfil-seccion-central content-section section-hidden">
             <div class="section-card">
                 <div class="section-header">
@@ -360,12 +684,12 @@ if ($user_id) {
                     <p class="section-description">Revisa tu actividad reciente en NexoHub.</p>
                 </div>
                 <div id="activityList">
-                    <div class="loading-placeholder">Cargando actividad…</div>
+                    <div class="loading-placeholder">Cargando actividad...</div>
                 </div>
             </div>
         </section>
 
-        <!--  seccion: configuracion  -->
+        <!-- seccion: configuracion -->
         <section id="config" class="perfil-seccion-central content-section section-hidden">
             <div class="section-card">
                 <div class="section-header">
@@ -407,10 +731,10 @@ if ($user_id) {
 
 <div class="sidebar-overlay-movil" id="sidebarOverlay"></div>
 
-<!--  TOAST  -->
+<!-- mensajes flotantes -->
 <div id="toast"></div>
 
-<!--  MODAL EDITAR PERFIL  -->
+<!-- modal para editar perfil -->
 <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
     <div class="modal-content">
         <h2 id="editModalTitle">Editar perfil</h2>
@@ -426,10 +750,13 @@ if ($user_id) {
 </div>
 
 <script>
+// cuando el documento esta listo
 document.addEventListener('DOMContentLoaded', () => {
 
-    //  Utilidades 
+    // funciones auxiliares
     const $ = id => document.getElementById(id);
+    
+    // mostrar mensaje temporal
     const toast = (msg, isError = false) => {
         const t = $('toast');
         t.textContent = msg;
@@ -437,6 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => t.className = '', 3000);
     };
 
+    // peticion post ajax
     const ajaxPost = async (data) => {
         const fd = new FormData();
         for (const [k, v] of Object.entries(data)) fd.append(k, v);
@@ -448,6 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return r.json();
     };
 
+    // peticion get ajax
     const ajaxGet = async (action) => {
         const r = await fetch(`${window.location.href}?action=${action}`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -455,16 +784,43 @@ document.addEventListener('DOMContentLoaded', () => {
         return r.json();
     };
 
-    //  Navegación secciones 
+    // dibujar estrellas segun puntuacion
+    function renderStars(rating) {
+        const fullStars = Math.min(5, Math.floor(rating || 0));
+        const emptyStars = 5 - fullStars;
+        return '<span class="rating-stars">' + 
+               '★'.repeat(fullStars) + 
+               '☆'.repeat(emptyStars) + 
+               '</span>';
+    }
+
+    // escapar html para evitar xss
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // navegacion entre secciones
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('.content-section');
-    let reviewsLoaded   = false;
-    let activityLoaded  = false;
+    let reviewsLoaded = false;
+    let activityLoaded = false;
 
     const showSection = (id) => {
         sections.forEach(sec => sec.classList.toggle('section-hidden', sec.id !== id));
-        if (id === 'resenas'  && !reviewsLoaded)  { loadReviews();  reviewsLoaded  = true; }
-        if (id === 'actividad' && !activityLoaded) { loadActivity(); activityLoaded = true; }
+        if (id === 'resenas' && !reviewsLoaded) { 
+            loadReviews(); 
+            reviewsLoaded = true; 
+        }
+        if (id === 'actividad' && !activityLoaded) { 
+            loadActivity(); 
+            activityLoaded = true; 
+        }
     };
 
     navItems.forEach(item => {
@@ -475,23 +831,32 @@ document.addEventListener('DOMContentLoaded', () => {
             showSection(item.dataset.section);
             const sb = document.querySelector('.sidebar-estatico');
             const ov = $('sidebarOverlay');
-            if (sb?.classList.contains('open')) { sb.classList.remove('open'); ov.classList.remove('show'); }
+            if (sb?.classList.contains('open')) { 
+                sb.classList.remove('open'); 
+                ov.classList.remove('show'); 
+            }
         });
     });
 
-    //  menu movil 
+    // menu para movil
     const menuToggle = $('menuMovilToggle');
-    const sidebar    = document.querySelector('.sidebar-estatico');
-    const overlay    = $('sidebarOverlay');
-    menuToggle?.addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
-    overlay?.addEventListener('click',   () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+    const sidebar = document.querySelector('.sidebar-estatico');
+    const overlay = $('sidebarOverlay');
+    menuToggle?.addEventListener('click', () => { 
+        sidebar.classList.add('open'); 
+        overlay.classList.add('show'); 
+    });
+    overlay?.addEventListener('click', () => { 
+        sidebar.classList.remove('open'); 
+        overlay.classList.remove('show'); 
+    });
 
-    //  MODAL EDITAR PERFIL 
-    const editModal     = $('editModal');
-    const saveModalBtn  = $('saveModalBtn');
+    // modal editar perfil
+    const editModal = $('editModal');
+    const saveModalBtn = $('saveModalBtn');
     const cancelModalBtn = $('cancelModalBtn');
-    const modalName     = $('modalName');
-    const modalDesc     = $('modalDesc');
+    const modalName = $('modalName');
+    const modalDesc = $('modalDesc');
 
     $('editProfileBtn')?.addEventListener('click', () => {
         modalName.value = $('displayName').textContent.trim();
@@ -502,7 +867,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cancelModalBtn?.addEventListener('click', () => editModal.classList.remove('show'));
 
-    // Cerrar modal con Escape
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') editModal.classList.remove('show');
     });
@@ -511,54 +875,65 @@ document.addEventListener('DOMContentLoaded', () => {
         const newName = modalName.value.trim();
         const newDesc = modalDesc.value.trim();
 
-        if (!newName) { toast('El nombre no puede estar vacío.', true); return; }
+        if (!newName) { 
+            toast('El nombre no puede estar vacio.', true); 
+            return; 
+        }
 
         saveModalBtn.disabled = true;
-        saveModalBtn.innerHTML = '<span class="spinner"></span> Guardando…';
+        saveModalBtn.innerHTML = '<span class="spinner"></span> Guardando...';
 
         try {
-            const res = await ajaxPost({ action: 'update_profile', name: newName, description: newDesc });
+            const res = await ajaxPost({ 
+                action: 'update_profile', 
+                name: newName, 
+                description: newDesc 
+            });
             if (res.ok) {
-                // Actualizar UI
                 $('displayName').textContent = newName;
-                $('inputDescripcion').value  = newDesc;
+                $('inputDescripcion').value = newDesc;
 
-                // Actualizar inicial si cambio el nombre
                 const newInitial = newName.charAt(0).toUpperCase();
                 $('profileInitial').textContent = newInitial;
                 const sa = $('smallAvatar').querySelector('span');
                 if (sa) sa.textContent = newInitial;
 
-                toast('Perfil actualizado correctamente ✓');
+                toast('Perfil actualizado correctamente');
                 editModal.classList.remove('show');
             } else {
                 toast(res.msg || 'Error al guardar.', true);
             }
         } catch (err) {
-            toast('Error de conexión.', true);
+            toast('Error de conexion.', true);
         }
 
         saveModalBtn.disabled = false;
         saveModalBtn.textContent = 'Guardar';
     });
 
-    //  descripcion — guardar al perder foco 
+    // guardar descripcion automaticamente
     const inputDesc = $('inputDescripcion');
     let descTimer;
     inputDesc?.addEventListener('input', () => {
         clearTimeout(descTimer);
         descTimer = setTimeout(async () => {
-            await ajaxPost({ action: 'update_profile', name: $('displayName').textContent.trim(), description: inputDesc.value });
+            await ajaxPost({ 
+                action: 'update_profile', 
+                name: $('displayName').textContent.trim(), 
+                description: inputDesc.value 
+            });
         }, 800);
     });
-    inputDesc?.addEventListener('keydown', e => { if (e.key === 'Enter') inputDesc.blur(); });
+    inputDesc?.addEventListener('keydown', e => { 
+        if (e.key === 'Enter') inputDesc.blur(); 
+    });
 
-    //  Foto de perfil 
-    const btnFoto    = $('btnCambiarFoto');
-    const inputFoto  = $('inputFotoPerfil');
-    const avatar     = $('profileAvatar');
-    const initSpan   = $('profileInitial');
-    const smallAv    = $('smallAvatar');
+    // subir foto de perfil
+    const btnFoto = $('btnCambiarFoto');
+    const inputFoto = $('inputFotoPerfil');
+    const avatar = $('profileAvatar');
+    const initSpan = $('profileInitial');
+    const smallAv = $('smallAvatar');
 
     btnFoto?.addEventListener('click', () => inputFoto.click());
 
@@ -566,108 +941,211 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = inputFoto.files[0];
         if (!file) return;
 
-        // vista previa inmediata
         const localUrl = URL.createObjectURL(file);
-        avatar.style.backgroundImage    = `url('${localUrl}')`;
-        avatar.style.backgroundSize     = 'cover';
+        avatar.style.backgroundImage = `url('${localUrl}')`;
+        avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
-        avatar.style.color              = 'transparent';
-        initSpan.style.opacity          = '0';
+        avatar.style.color = 'transparent';
+        initSpan.style.opacity = '0';
 
-        // Subir al servidor
         const fd = new FormData();
         fd.append('action', 'upload_photo');
         fd.append('photo', file);
         try {
-            const r   = await fetch(window.location.href, {
+            const r = await fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 body: fd
             });
             const res = await r.json();
             if (res.ok) {
-                // Actualizar avatar pequeño con URL del servidor
                 avatar.style.backgroundImage = `url('${res.url}')`;
                 smallAv.innerHTML = `<img src="${res.url}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-                toast('Foto actualizada ✓');
+                toast('Foto actualizada');
             } else {
                 toast(res.msg || 'Error al subir la foto.', true);
-                // Revertir preview si falla
                 avatar.style.backgroundImage = '';
                 initSpan.style.opacity = '1';
             }
         } catch {
-            toast('Error de conexión al subir foto.', true);
+            toast('Error de conexion al subir foto.', true);
         }
     });
 
-    //   Cargar reseñas 
+    // cargar reseñas del usuario
     async function loadReviews() {
         const list = $('reviewList');
+        if (!list) return;
+        
+        list.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Cargando reseñas...</div>';
+        
         try {
             const res = await ajaxGet('get_reviews');
-            if (!res.ok || !res.reviews.length) {
-                list.innerHTML = '<div class="empty-state"><p>Todavía no se han hecho reseñas.</p></div>';
+            
+            if (!res.ok) {
+                throw new Error(res.msg || 'Error al cargar');
+            }
+            
+            if (!res.reviews || res.reviews.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 12H5v-2h14v2zm0-3H5V9h14v2zm0-3H5V6h14v2z"/>
+                        </svg>
+                        <p>Todavia no has escrito ninguna reseña</p>
+                        <small>Explora contenido y comparte tu opinion!</small>
+                    </div>
+                `;
                 return;
             }
+            
+            // actualizar contador de comentarios
+            const statComentarios = $('statComentarios');
+            if (statComentarios) {
+                statComentarios.textContent = res.count || res.reviews.length;
+            }
+            
             list.innerHTML = res.reviews.map(rv => {
-                const stars  = '★'.repeat(Math.min(5, Math.round(rv.rating || 0))) +
-                               '☆'.repeat(Math.max(0, 5 - Math.round(rv.rating || 0)));
-                const fecha  = rv.created_at ? new Date(rv.created_at).toLocaleDateString('es-AR', { year:'numeric', month:'short', day:'numeric' }) : '';
-                const titulo = rv.titulo || rv.media_title || 'Sin título';
-                const poster = rv.poster  || rv.poster_url || '';
-
-                return `<div class="review-card">
-                    ${poster
-                        ? `<img class="poster-thumb" src="${escHtml(poster)}" alt="${escHtml(titulo)}" loading="lazy">`
-                        : `<div class="poster-thumb no-img">🎬</div>`}
-                    <div class="rv-info">
-                        <div class="rv-title">${escHtml(titulo)}</div>
-                        <div class="rv-stars">${stars}</div>
-                        <div class="rv-comment">${escHtml(rv.comment || '')}</div>
-                        <div class="rv-date">${fecha}</div>
+                const stars = renderStars(rv.rating || 0);
+                const fecha = rv.formatted_date || (rv.created_at ? new Date(rv.created_at).toLocaleDateString('es-AR') : 'fecha desconocida');
+                const titulo = rv.titulo || rv.media_title || 'sin titulo';
+                const poster = rv.poster || rv.poster_url || '';
+                const comentario = rv.comment || 'sin comentario';
+                
+                return `
+                    <div class="review-card" data-review-id="${rv.id}">
+                        <div class="review-poster">
+                            ${poster ? 
+                                `<img src="${escHtml(poster)}" alt="${escHtml(titulo)}" loading="lazy" onerror="this.src='/proyecto7mo/Frontend/img/placeholder.jpg'">` : 
+                                `<div class="no-poster">🎬</div>`
+                            }
+                        </div>
+                        <div class="review-content">
+                            <div class="review-header">
+                                <h3 class="review-title">${escHtml(titulo)}</h3>
+                                <div class="review-rating">${stars}</div>
+                            </div>
+                            <p class="review-comment">${escHtml(comentario)}</p>
+                            <div class="review-footer">
+                                <span class="review-date">📅 ${escHtml(fecha)}</span>
+                                <button class="delete-review-btn" data-id="${rv.id}">🗑️ Eliminar</button>
+                            </div>
+                        </div>
                     </div>
-                </div>`;
+                `;
             }).join('');
-        } catch {
-            list.innerHTML = '<div class="empty-state"><p>No se pudieron cargar las reseñas.</p></div>';
+            
+            // botones para eliminar reseñas
+            document.querySelectorAll('.delete-review-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const reviewId = btn.dataset.id;
+                    if (confirm('¿Estas seguro de que quieres eliminar esta reseña? Esta accion no se puede deshacer.')) {
+                        try {
+                            const res = await ajaxPost({ action: 'delete_review', review_id: reviewId });
+                            if (res.ok) {
+                                toast('Reseña eliminada correctamente');
+                                // recargar datos
+                                reviewsLoaded = false;
+                                activityLoaded = false;
+                                loadReviews();
+                                loadActivity();
+                                // actualizar contador
+                                const currentCount = parseInt($('statComentarios')?.textContent || '0');
+                                if ($('statComentarios')) {
+                                    $('statComentarios').textContent = currentCount - 1;
+                                }
+                            } else {
+                                toast(res.msg || 'Error al eliminar la reseña', true);
+                            }
+                        } catch (err) {
+                            toast('Error de conexion', true);
+                        }
+                    }
+                });
+            });
+            
+        } catch (error) {
+            console.error('error cargando reseñas:', error);
+            list.innerHTML = `
+                <div class="empty-state error">
+                    <p>❌ No se pudieron cargar las reseñas</p>
+                    <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #667eea; border: none; border-radius: 6px; color: white; cursor: pointer;">Reintentar</button>
+                </div>
+            `;
         }
     }
 
-    //  Cargar actividad 
+    // cargar actividad del usuario
     async function loadActivity() {
         const list = $('activityList');
+        if (!list) return;
+        
+        list.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Cargando actividad...</div>';
+        
         try {
             const res = await ajaxGet('get_activity');
-            if (!res.ok || !res.activity.length) {
-                list.innerHTML = '<div class="empty-state"><p>Aún no hay actividad registrada.</p></div>';
+            
+            if (!res.ok || !res.activity || res.activity.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                        </svg>
+                        <p>Aun no hay actividad registrada</p>
+                        <small>Escribe tu primera reseña para comenzar!</small>
+                    </div>
+                `;
                 return;
             }
+            
             list.innerHTML = res.activity.map(act => {
-                const fecha  = act.created_at ? new Date(act.created_at).toLocaleDateString('es-AR', { year:'numeric', month:'short', day:'numeric' }) : '';
+                const fecha = act.formatted_date || (act.created_at ? new Date(act.created_at).toLocaleDateString('es-AR') : '');
+                const timeAgo = act.time_ago || '';
+                const ratingStars = act.rating ? renderStars(act.rating) : '';
                 const iconPath = act.tipo === 'review'
                     ? 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 12H5v-2h14v2zm0-3H5V9h14v2zm0-3H5V6h14v2z'
-                    : 'M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z';
-                return `<div class="activity-item">
-                    <div class="act-icon"><svg viewBox="0 0 24 24"><path d="${iconPath}"/></svg></div>
-                    <div class="act-text">
-                        <b>${escHtml(act.detalle)}</b>${act.titulo ? ` sobre <em>${escHtml(act.titulo)}</em>` : ''}
+                    : 'M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z';
+                
+                return `
+                    <div class="activity-item">
+                        <div class="act-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="${iconPath}"/>
+                            </svg>
+                        </div>
+                        <div class="act-text">
+                            <b>${escHtml(act.detalle)}</b>
+                            ${act.titulo ? `<br><em>${escHtml(act.titulo)}</em>` : ''}
+                            ${ratingStars ? `<div style="margin-top: 4px;">${ratingStars}</div>` : ''}
+                        </div>
+                        <div class="act-date">
+                            ${fecha}
+                            ${timeAgo ? `<div class="act-time-ago">${timeAgo}</div>` : ''}
+                        </div>
                     </div>
-                    <div class="act-date">${fecha}</div>
-                </div>`;
+                `;
             }).join('');
-        } catch {
-            list.innerHTML = '<div class="empty-state"><p>No se pudo cargar la actividad.</p></div>';
+            
+        } catch (error) {
+            console.error('error cargando actividad:', error);
+            list.innerHTML = `
+                <div class="empty-state error">
+                    <p>❌ No se pudo cargar la actividad</p>
+                    <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #667eea; border: none; border-radius: 6px; color: white; cursor: pointer;">Reintentar</button>
+                </div>
+            `;
         }
     }
+//tema oscuro/claro
     const themeToggle = $('themeToggle');
-    const themeLabel  = $('themeLabel');
+    const themeLabel = $('themeLabel');
 
     const applyTheme = () => {
         const theme = localStorage.getItem('profile_theme') || 'dark';
         document.documentElement.dataset.theme = theme;
         if (themeToggle) themeToggle.checked = (theme === 'dark');
-        if (themeLabel)  themeLabel.textContent = theme === 'dark' ? 'Oscuro' : 'Claro';
+        if (themeLabel) themeLabel.textContent = theme === 'dark' ? 'Oscuro' : 'Claro';
     };
 
     themeToggle?.addEventListener('change', () => {
@@ -675,6 +1153,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('profile_theme', theme);
         applyTheme();
     });
+
+    // configuracion de privacidad
     const privacyBtns = document.querySelectorAll('.privacy-option');
 
     const applyPrivacy = () => {
@@ -685,14 +1165,10 @@ document.addEventListener('DOMContentLoaded', () => {
     privacyBtns.forEach(b => b.addEventListener('click', () => {
         localStorage.setItem('profile_privacy', b.dataset.value);
         applyPrivacy();
-        toast('Preferencia de privacidad guardada ✓');
+        toast('Preferencia de privacidad guardada');
     }));
 
-    function escHtml(str) {
-        return String(str)
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    // iniciar todo
     showSection('perfil');
     applyTheme();
     applyPrivacy();
