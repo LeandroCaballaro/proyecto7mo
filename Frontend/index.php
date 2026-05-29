@@ -82,6 +82,7 @@ $showRegistro = isset($_GET['registro']);
         <?php include 'hero-section.php'; ?>
         <?php include 'features-section.php'; ?>
         <?php include 'genres-section.php'; ?>
+        <div class="w-full border-t border-border opacity-30"></div>
         <?php include 'featured-movies-section.php'; ?>
         <?php include 'top-reviewers-section.php'; ?>
         <?php include 'cta-section.php'; ?>
