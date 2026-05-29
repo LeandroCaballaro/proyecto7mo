@@ -12,7 +12,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background-color: #1a1a2e;
   min-height: 100vh;
-  padding: 20px;
+  overflow-x: hidden;
 }
 body::before {
   content: "";
@@ -80,6 +80,9 @@ body::before {
     font-size: 16px;
     font-weight: 600;
 }
+.form-group {
+  margin-top: 12px;
+}
 
 .form-group input {
   width: 100%;
@@ -90,6 +93,7 @@ body::before {
   color: #ffffff;
   font-size: 16px;
   outline: none;
+  margin-top: 4px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -163,7 +167,15 @@ body::before {
   align-items: center;
   width: 100%;
 }
-
+.error-message {
+    margin-top: 25px;
+    padding: 3px;
+    background-color:#b1a0a0;
+    border: 2px solid #8d0000;
+    color: rgb(163, 0, 0);
+    border-radius: 6px;
+    text-align: center;
+}
 .google-button-wrapper {
   display: flex;
     justify-content: center;
