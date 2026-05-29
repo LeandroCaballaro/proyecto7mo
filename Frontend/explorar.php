@@ -80,6 +80,7 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style/explorar.css">
     <link href="style/styles.css" rel="stylesheet">
+    <link rel="icon" href="../public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
     <?php include 'header.php'; ?>
