@@ -214,90 +214,6 @@ $user_reviews = [
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style/styles.css">
     <link rel="stylesheet" href="style/user.css">
-    <style>
-
-.edit-modal{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.6);
-
-    justify-content:center;
-    align-items:center;
-
-    z-index:9999;
-}
-
-.edit-modal.show{
-    display:flex;
-}
-
-.edit-modal-content{
-    background:#1e1e1e;
-    padding:30px;
-    border-radius:12px;
-    width:350px;
-
-    display:flex;
-    flex-direction:column;
-    gap:15px;
-}
-
-.edit-modal-content input,
-.edit-modal-content textarea{
-    width:100%;
-    padding:10px;
-}
-/* ===== TEMA CLARO ===== */
-
-:root[data-theme="light"] body{
-    background:#f5f5f5;
-    color:#111;
-}
-
-:root[data-theme="light"] .section-card,
-:root[data-theme="light"] .sidebar-estatico,
-:root[data-theme="light"] .edit-modal-content{
-    background:#ffffff;
-    color:#111;
-}
-
-:root[data-theme="light"] input,
-:root[data-theme="light"] textarea{
-    background:#f0f0f0;
-    color:#111;
-}
-
-/* ===== TEMA OSCURO ===== */
-
-:root[data-theme="dark"] body{
-    background:#0f0f0f;
-    color:white;
-}
-
-/* ===== BOTONES PRIVACIDAD ===== */
-
-.privacy-option{
-    padding:10px 15px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    background:#2a2a2a;
-    color:white;
-    transition:0.3s;
-}
-
-.privacy-option.active{
-    background:#6c63ff;
-    color:white;
-    transform:scale(1.05);
-}
-
-
-</style>
 </head>
 <body class="perfil-body">
     <!-- Contenedor Principal Split-Screen -->
@@ -567,7 +483,7 @@ $user_reviews = [
                 </div>
             </section>
 
-            <section id="config" class="content-section section-hidden">
+            <section id="config" class=" content-section section-hidden">
                 <div class="section-card">
                     <div class="section-header">
                         <h2>Configuración</h2>
@@ -630,6 +546,7 @@ $user_reviews = [
 </div>
     <!-- Overlay móvil para cerrar el menú lateral -->
     <div class="sidebar-overlay-movil" id="sidebarOverlay"></div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const menuMovilToggle = document.getElementById('menuMovilToggle');
@@ -809,6 +726,7 @@ $user_reviews = [
             applySavedTheme();
             applySavedPrivacy();
 
+
 if(saveProfileChanges){
 
     saveProfileChanges.addEventListener('click', () => {
@@ -862,6 +780,5 @@ closeModalBtn.addEventListener('click', () => {
 }
 });
     </script>
-    
 </body>
 </html>
