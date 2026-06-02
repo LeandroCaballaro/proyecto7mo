@@ -50,7 +50,15 @@ if ($user_id) {
         $stmt = $db->prepare("SELECT COUNT(*) FROM review_responses WHERE user_id = ?");
         $stmt->execute([$user_id]);
         $responses_count = (int) $stmt->fetchColumn();
-        
+
+        $stmt = $db->prepare("SELECT description, profile_image FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+
+        $userDescription = $userData['description'] ?? '';
+        $userProfileImage = $userData['profile_image'] ?? '';
+
         $comments_count = $reviews_count + $responses_count;
         // Obtener reseñas del usuario
 $stmt = $db->prepare("
@@ -67,6 +75,132 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Mantener fallbacks silenciosos en caso de error de BD
     }
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+
+    header('Content-Type: application/json');
+
+    $user_id = $_SESSION['user']['id'] ?? null;
+
+    require_once __DIR__ . '/../Backend/models/Database.php';
+
+    $db = Database::getInstance()->getConnection();
+
+    // DESCRIPCION
+    if ($_POST['action'] === 'update_description') {
+        $description = $_POST['description'] ?? '';
+        $stmt = $db->prepare("
+            UPDATE users
+            SET description = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$description, $user_id]);
+
+        echo json_encode([
+            'success' => true
+        ]);
+        exit;
+    }
+
+    // NOMBRE
+    if ($_POST['action'] === 'update_name') {
+        $name = $_POST['name'] ?? '';
+        $stmt = $db->prepare("
+            UPDATE users
+            SET name = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$name, $user_id]);
+
+        $_SESSION['user']['name'] = $name;
+
+        echo json_encode([
+            'success' => true
+        ]);
+        exit;
+    }
+
+    // FOTO
+    if ($_POST['action'] === 'update_photo') {
+
+    if(isset($_FILES['photo'])){
+
+        // Obtener foto actual
+        $stmt = $db->prepare("
+            SELECT profile_image
+            FROM users
+            WHERE id = ?
+        ");
+        $stmt->execute([$user_id]);
+
+        $currentImage = $stmt->fetchColumn();
+
+        // Borrar foto vieja
+        if ($currentImage) {
+
+            $oldFile = $_SERVER['DOCUMENT_ROOT'] . $currentImage;
+
+            if (file_exists($oldFile)) {
+                unlink($oldFile);
+            }
+        }
+
+        // Guardar nueva foto
+        $file = $_FILES['photo'];
+        $fileName = time() . '_' . $file['name'];
+
+        $uploadDir = __DIR__ . '/uploads/';
+        $uploadPath = '/proyecto7mo/Frontend/uploads/' . $fileName;
+
+        move_uploaded_file(
+            $file['tmp_name'],
+            $uploadDir . $fileName
+        );
+
+        $stmt = $db->prepare("
+            UPDATE users
+            SET profile_image = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$uploadPath, $user_id]);
+
+        echo json_encode([
+            'success' => true,
+            'image' => $uploadPath
+        ]);
+        exit;
+    }
+}
+}
+?>
+<?php
+
+$user_reviews = [
+    [
+        "title" => "Interstellar",
+        "poster" => "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"
+    ],
+    [
+        "title" => "Batman",
+        "poster" => "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
+    ],
+    [
+        "title" => "Joker",
+        "poster" => "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg"
+    ],
+    [
+        "title" => "Avengers",
+        "poster" => "https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg"
+    ],
+    [
+        "title" => "Inception",
+        "poster" => "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg"
+    ],
+    [
+        "title" => "Batman",
+        "poster" => "https://image.tmdb.org/t/p/w500/5P8SmMzSNYikXpxil6BYzJ16611.jpg"
+    ]
+];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -80,90 +214,6 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style/styles.css">
     <link rel="stylesheet" href="style/user.css">
-    <style>
-
-.edit-modal{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.6);
-
-    justify-content:center;
-    align-items:center;
-
-    z-index:9999;
-}
-
-.edit-modal.show{
-    display:flex;
-}
-
-.edit-modal-content{
-    background:#1e1e1e;
-    padding:30px;
-    border-radius:12px;
-    width:350px;
-
-    display:flex;
-    flex-direction:column;
-    gap:15px;
-}
-
-.edit-modal-content input,
-.edit-modal-content textarea{
-    width:100%;
-    padding:10px;
-}
-/* ===== TEMA CLARO ===== */
-
-:root[data-theme="light"] body{
-    background:#f5f5f5;
-    color:#111;
-}
-
-:root[data-theme="light"] .section-card,
-:root[data-theme="light"] .sidebar-estatico,
-:root[data-theme="light"] .edit-modal-content{
-    background:#ffffff;
-    color:#111;
-}
-
-:root[data-theme="light"] input,
-:root[data-theme="light"] textarea{
-    background:#f0f0f0;
-    color:#111;
-}
-
-/* ===== TEMA OSCURO ===== */
-
-:root[data-theme="dark"] body{
-    background:#0f0f0f;
-    color:white;
-}
-
-/* ===== BOTONES PRIVACIDAD ===== */
-
-.privacy-option{
-    padding:10px 15px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    background:#2a2a2a;
-    color:white;
-    transition:0.3s;
-}
-
-.privacy-option.active{
-    background:#6c63ff;
-    color:white;
-    transform:scale(1.05);
-}
-
-
-</style>
 </head>
 <body class="perfil-body">
     <!-- Contenedor Principal Split-Screen -->
@@ -242,10 +292,26 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <div class="header-acciones">
-                    <!-- Avatar inicial pequeño -->
-                    <div class="avatar-pequeno">
-                        <span><?= $user_initial ?></span>
+
+                    <div class="avatar-pequeno"
+
+                        <?php if(!empty($userProfileImage)): ?>
+
+                            style="
+                                background-image:url('<?= $userProfileImage ?>');
+                                background-size:cover;
+                                background-position:center;
+                            "
+
+                        <?php endif; ?>
+                    >
+
+                        <?php if(empty($userProfileImage)): ?>
+                            <span></span>
+                        <?php endif; ?>
+
                     </div>
+
                 </div>
             </header>
 
@@ -254,8 +320,21 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 <!-- Avatar de usuario grande con botón de foto flotante -->
                 <div class="avatar-grande-container">
-                    <div class="avatar-grande" id="profileAvatar">
-                        <span id="profileInitial"><?= $user_initial ?></span>
+                    <div
+                class="avatar-grande"
+                id="profileAvatar"
+
+                <?php if(!empty($userProfileImage)): ?>
+
+                    style="
+                        background-image:url('<?= $userProfileImage ?>');
+                        background-size:cover;
+                        background-position:center;
+                    "
+
+                <?php endif; ?>
+>
+                        
                     </div>
                     <button class="btn-cambiar-foto" id="btnCambiarFoto" type="button" title="Cambiar foto de perfil">
                         <div class="camara-overlay">
@@ -268,13 +347,26 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <!-- Nombre y Correo del Usuario -->
-<h1 class="perfil-nombre" id="profileName">
-    <?= htmlspecialchars($user_name) ?>
-</h1>
+                <div class="profile-name-wrapper">
+
+                    <h1 class="perfil-nombre" id="profileName">
+                        <?= htmlspecialchars($user_name) ?>
+                    </h1>
+
+                    <button class="edit-name-btn" id="editProfileBtn" type="button">
+
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+
+                        </svg>
+
+                    </button>
+
+                </div>
                 <p class="perfil-correo"><?= htmlspecialchars($user_email) ?></p>
-                <button class="edit-profile-btn" id="editProfileBtn">
-                    Editar perfil
-                </button>
 
                 <!-- Estadísticas del usuario -->
                 <div class="stats-perfil-container">
@@ -314,19 +406,18 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </span>
-<input type="text"
-       class="descripcion-input"
-       id="profileDescription"
-       placeholder="Agregar descripción"
-       maxlength="100"
-       readonly
-       value="<?= htmlspecialchars($user_description) ?>">
+                        <input type="text"
+                            class="descripcion-input"
+                            id="profileDescription"
+                            placeholder="Agregar descripción"
+                            value="<?= htmlspecialchars($userDescription) ?>"
+                            maxlength="100">
                     </div>
                 </div>
 
             </section>
 
-<section id="resenas" class="perfil-seccion-central content-section section-hidden">
+<section id="resenas" class="content-section section-hidden">
 
     <div class="section-card">
 
@@ -343,9 +434,17 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <?php foreach ($user_reviews as $review): ?>
 
-                    <div class="review-card">
-                        <h3><?= htmlspecialchars($review['title']) ?></h3>
-                        <p><?= htmlspecialchars($review['comment']) ?></p>
+                    <div class="movie-card">
+
+                        <img 
+                            src="<?= htmlspecialchars($review['poster']) ?>" 
+                            alt="<?= htmlspecialchars($review['title']) ?>"
+                        >
+
+                        <div class="movie-overlay">
+                            <h3><?= htmlspecialchars($review['title']) ?></h3>
+                        </div>
+
                     </div>
 
                 <?php endforeach; ?>
@@ -373,7 +472,7 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <div class="activity-list">
 
     <div class="activity-card">
-        <p>Has realizado <?= $comments_count ?> interacciones.</p>
+        <p>Has realizado <?= $comments_count?> comentarios.</p>
     </div>
 
     <div class="activity-card">
@@ -384,7 +483,7 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </section>
 
-            <section id="config" class="perfil-seccion-central content-section section-hidden">
+            <section id="config" class=" content-section section-hidden">
                 <div class="section-card">
                     <div class="section-header">
                         <h2>Configuración</h2>
@@ -413,7 +512,6 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="privacy-options" id="privacyOptions">
                                 <button type="button" class="privacy-option" data-value="public">Público</button>
                                 <button type="button" class="privacy-option" data-value="private">Privado</button>
-                                <button type="button" class="privacy-option" data-value="friends">Solo amigos</button>
                             </div>
                         </div>
                     </div>
@@ -424,26 +522,31 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
     </div>
 
-    <!-- Overlay móvil para cerrar el menú lateral -->
-    <div class="sidebar-overlay-movil" id="sidebarOverlay"></div>
-<div class="edit-modal" id="editModal">
+        <div class="edit-modal" id="editModal">
 
     <div class="edit-modal-content">
 
+        <button class="close-modal-btn" id="closeModalBtn" type="button">
+            ✕
+        </button>
+
         <h2>Editar perfil</h2>
+        <input 
+            type="text" 
+            id="editName" 
+            placeholder="Nuevo nombre"
+        >
 
-        <input type="text" id="editName" placeholder="Nuevo nombre">
-
-        <textarea id="editDescription" placeholder="Nueva descripción"></textarea>
-
-        <div class="edit-modal-actions">
-            <button type="button" id="closeModalBtn">Cancelar</button>
-            <button type="button" id="saveProfileChanges">Guardar cambios</button>
-        </div>
+        <button type="button" id="saveProfileChanges">
+            Guardar cambios
+        </button>
 
     </div>
 
 </div>
+    <!-- Overlay móvil para cerrar el menú lateral -->
+    <div class="sidebar-overlay-movil" id="sidebarOverlay"></div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const menuMovilToggle = document.getElementById('menuMovilToggle');
@@ -451,6 +554,7 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const overlay = document.getElementById('sidebarOverlay');
             const navItems = document.querySelectorAll('.nav-item');
             const sections = document.querySelectorAll('.content-section');
+            const inputDescripcion = document.getElementById('profileDescription');
             const btnCambiarFoto = document.getElementById('btnCambiarFoto');
             const inputFotoPerfil = document.getElementById('inputFotoPerfil');
             const profileAvatar = document.getElementById('profileAvatar');
@@ -460,13 +564,11 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const themeLabel = document.getElementById('themeLabel');
             const privacyOptions = document.querySelectorAll('.privacy-option');
             const reviews = [];
-                        const editProfileBtn = document.getElementById('editProfileBtn');
+            const editProfileBtn = document.getElementById('editProfileBtn');
             const editModal = document.getElementById('editModal');
             const saveProfileChanges = document.getElementById('saveProfileChanges');
-            const closeModalBtn = document.getElementById('closeModalBtn');
             const editName = document.getElementById('editName');
-            const editDescription = document.getElementById('editDescription');
-
+            const closeModalBtn = document.getElementById('closeModalBtn');
             const profileName = document.getElementById('profileName');
             const profileDescription = document.getElementById('profileDescription');
 
@@ -480,25 +582,7 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 navItems.forEach(nav => nav.classList.toggle('active', nav === activeItem));
             };
 
-            const applySavedPhoto = () => {
-                const photoData = localStorage.getItem('profile_photo');
-                if (photoData) {
-                    profileAvatar.style.backgroundImage = `url('${photoData}')`;
-                    profileAvatar.style.backgroundSize = 'cover';
-                    profileAvatar.style.backgroundPosition = 'center';
-                    profileAvatar.style.backgroundRepeat = 'no-repeat';
-                    profileAvatar.style.color = 'transparent';
-                    profileInitial.style.opacity = '0';
-
-                    if (smallAvatar) {
-                        smallAvatar.style.backgroundImage = `url('${photoData}')`;
-                        smallAvatar.style.backgroundSize = 'cover';
-                        smallAvatar.style.backgroundPosition = 'center';
-                        smallAvatar.style.backgroundRepeat = 'no-repeat';
-                        smallAvatar.style.color = 'transparent';
-                    }
-                }
-            };
+           
 
             const applySavedTheme = () => {
                 const savedTheme = localStorage.getItem('profile_theme') || 'dark';
@@ -552,23 +636,75 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
             initSectionNavigation();
             showSection('perfil');
 
+            inputDescripcion.addEventListener('blur', () => {
+
+                fetch('/proyecto7mo/Frontend/user.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: 'update_description',
+                        description: inputDescripcion.value
+                    })
+                });
+
+            });
+
+            inputDescripcion.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inputDescripcion.blur();
+                }
+            });
 
             if (btnCambiarFoto && inputFotoPerfil) {
-                btnCambiarFoto.addEventListener('click', () => inputFotoPerfil.click());
 
-                inputFotoPerfil.addEventListener('change', () => {
-                    const file = inputFotoPerfil.files[0];
-                    if (!file) return;
+    btnCambiarFoto.addEventListener('click', () => {
+        inputFotoPerfil.click();
+    });
 
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const imageUrl = event.target.result;
-                        localStorage.setItem('profile_photo', imageUrl);
-                        applySavedPhoto();
-                    };
-                    reader.readAsDataURL(file);
-                });
+    inputFotoPerfil.addEventListener('change', () => {
+
+        const file = inputFotoPerfil.files[0];
+
+        if(!file) return;
+
+        const formData = new FormData();
+
+        formData.append('action', 'update_photo');
+        formData.append('photo', file);
+
+        fetch('/proyecto7mo/Frontend/user.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+
+            console.log(data);
+
+            if(data.success){
+
+                profileAvatar.style.backgroundImage = `url('${data.image}')`;
+                profileAvatar.style.backgroundSize = 'cover';
+                profileAvatar.style.backgroundPosition = 'center';
+
+                profileInitial.style.opacity = '0';
+
+                if(smallAvatar){
+                    smallAvatar.style.backgroundImage = `url('${data.image}')`;
+                    smallAvatar.style.backgroundSize = 'cover';
+                    smallAvatar.style.backgroundPosition = 'center';
+                }
+
             }
+
+        });
+
+    });
+
+}
 
             if (themeToggle) {
                 themeToggle.addEventListener('change', () => {
@@ -587,80 +723,62 @@ $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 });
             }
 
-            applySavedPhoto();
             applySavedTheme();
             applySavedPrivacy();
 
-if (saveProfileChanges) {
 
-    saveProfileChanges.addEventListener('click', async () => {
+if(saveProfileChanges){
+
+    saveProfileChanges.addEventListener('click', () => {
 
         const newName = editName.value.trim();
-        const newDescription = editDescription.value.trim();
 
-        if (!newName) {
-            alert('El nombre no puede quedar vacío.');
-            return;
-        }
+        if(!newName) return;
 
-        try {
+        fetch('/proyecto7mo/Frontend/user.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                action: 'update_name',
+                name: newName
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
 
-            // guardar nombre
-            await fetch('/proyecto7mo/Frontend/update_profile.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    field: 'name',
-                    value: newName
-                })
-            });
+            if(data.success){
+                profileName.textContent = newName;
+                editModal.classList.remove('show');
+            }
 
-            // guardar descripcion
-            await fetch('/proyecto7mo/Frontend/update_profile.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    field: 'description',
-                    value: newDescription
-                })
-            });
-
-            // actualizar pantalla
-            profileName.textContent = newName;
-            profileDescription.value = newDescription;
-
-            // cerrar modal
-            editModal.classList.remove('show');
-
-        } catch (error) {
-
-            console.error(error);
-            alert('Ocurrió un error al guardar el perfil.');
-
-        }
+        });
 
     });
 
 }
 
-            if (editProfileBtn && editModal) {
-                editProfileBtn.addEventListener('click', () => {
-                    editName.value = profileName.textContent.trim();
-                    editDescription.value = profileDescription.value.trim();
-                    editModal.classList.add('show');
-                });
-            }
+if (editProfileBtn && editModal) {
+editProfileBtn.addEventListener('click', () => {
+    editModal.classList.toggle('show');
 
-            if (closeModalBtn && editModal) {
-                closeModalBtn.addEventListener('click', () => {
-                    editModal.classList.remove('show');
-                });
-            }
-        });
+});
+}
+if(editName){
+    editName.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter'){
+            e.preventDefault();
+            saveProfileChanges.click();
+        }
+    });
+}
+if(closeModalBtn){
+closeModalBtn.addEventListener('click', () => {
+    editModal.classList.remove('show');
+});
+}
+});
     </script>
 </body>
 </html>
