@@ -181,7 +181,7 @@ $user_reviews = [
         "poster" => "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"
     ],
     [
-        "title" => "Batman",
+        "title" => "El caballero de la noche asciende",
         "poster" => "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
     ],
     [
@@ -197,7 +197,7 @@ $user_reviews = [
         "poster" => "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg"
     ],
     [
-        "title" => "Batman",
+        "title" => "The Batman",
         "poster" => "https://image.tmdb.org/t/p/w500/5P8SmMzSNYikXpxil6BYzJ16611.jpg"
     ]
 ];
