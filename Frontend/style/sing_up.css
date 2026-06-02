@@ -12,7 +12,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background-color: #1a1a2e;
   min-height: 100vh;
-  padding: 20px;
+  overflow-x: hidden;
 }
 body::before {
   content: "";
@@ -80,6 +80,9 @@ body::before {
     font-size: 16px;
     font-weight: 600;
 }
+.form-group {
+  margin-top: 12px;
+}
 
 .form-group input {
   width: 100%;
@@ -90,6 +93,7 @@ body::before {
   color: #ffffff;
   font-size: 16px;
   outline: none;
+  margin-top: 4px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -142,17 +146,24 @@ body::before {
 
 .divider {
   margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .divider-text {
-  color: #b7b7b7;
-  font-size: 15px;
+  color: #cacaca;
+  font-size: 16px;
   font-weight: 600;
-  width: 100%;
+  padding: 0 12px;
+  background-color: #16213e;
+  border-radius: 4px;
+  z-index: 1;
 }
 
 .separador {
-  margin: 15px 0;
+  flex: 1;
+  margin: 0;
   border: none;
   border-top: 1px solid #4a6f9d;
 }
@@ -163,7 +174,15 @@ body::before {
   align-items: center;
   width: 100%;
 }
-
+.error-message {
+    margin-top: 25px;
+    padding: 3px;
+    background-color:#b1a0a0;
+    border: 2px solid #8d0000;
+    color: rgb(163, 0, 0);
+    border-radius: 6px;
+    text-align: center;
+}
 .google-button-wrapper {
   display: flex;
     justify-content: center;

@@ -58,7 +58,7 @@ $showRegistro = isset($_GET['registro']);
     <title>NexoHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="style/styles.css" rel="stylesheet">
-</head>
+    <link rel="icon" href="/proyecto7mo/public/nhlogo.png" type="image/png"></head>
 <body>
     <?php include 'header.php'; ?>
 
@@ -82,6 +82,7 @@ $showRegistro = isset($_GET['registro']);
         <?php include 'hero-section.php'; ?>
         <?php include 'features-section.php'; ?>
         <?php include 'genres-section.php'; ?>
+        <div class="w-full border-t border-border opacity-30"></div>
         <?php include 'featured-movies-section.php'; ?>
         <?php include 'top-reviewers-section.php'; ?>
         <?php include 'cta-section.php'; ?>

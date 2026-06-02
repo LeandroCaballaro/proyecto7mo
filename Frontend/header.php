@@ -1,8 +1,26 @@
 <?php
 $user = $_SESSION['user'] ?? null;
-$userPhoto = $user['photo'] ?? null;
+$userPhoto = $user['profile_image'] ?? null;
 $userInitial = $user ? mb_strtoupper(mb_substr($user['name'], 0, 1, 'UTF-8')) : '';
 
+require_once __DIR__ . '/../Backend/models/Database.php';
+
+if ($user && isset($user['id'])) {
+
+    $db = Database::getInstance()->getConnection();
+
+    $stmt = $db->prepare("
+        SELECT profile_image
+        FROM users
+        WHERE id = ?
+    ");
+
+    $stmt->execute([$user['id']]);
+
+    $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $userPhoto = $userData['profile_image'] ?? null;
+}
 // Determine current page to highlight active navigation link
 $uri = $_SERVER['REQUEST_URI'] ?? '';
 $is_home = (strpos($uri, 'index.php') !== false || $uri === '/proyecto7mo/' || $uri === '/proyecto7mo' || substr($uri, -1) === '/');
@@ -48,7 +66,7 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
                 <div class="flex items-center gap-3">
                     <a href="/proyecto7mo/Frontend/user.php" class="inline-flex items-center justify-center h-11 w-11 rounded-full overflow-hidden border border-border bg-secondary hover:border-primary transition-all duration-200">
                         <?php if ($userPhoto): ?>
-                            <img src="<?= htmlspecialchars($userPhoto) ?>" alt="Avatar" class="h-full w-full object-cover">
+                            <img src="<?= htmlspecialchars($userPhoto) ?>" alt="image" class="h-full w-full object-cover">
                         <?php else: ?>
                             <span class="flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-semibold text-base"><?= htmlspecialchars($userInitial) ?></span>
                         <?php endif; ?>

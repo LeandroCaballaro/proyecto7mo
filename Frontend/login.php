@@ -51,27 +51,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style/login.css">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <title>Iniciar Sesión - NexoHub</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión  - NexoHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style/login.css">
+  <link rel="stylesheet" href="style/styles.css">
+  <link rel="icon" href="../public/nhlogo.png" type="image/png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-    <?php include 'header.php'; ?>
+  <?php include 'header.php'; ?>
 
     <main class="flex-1 flex items-center justify-center py-12 px-4">
         <form method="POST" action="/proyecto7mo/Frontend/login.php" class="contenedor">
             <h1 class="titulo">Inicia Sesión</h1>
-            <br>
+            
             
             <?php if ($authError): ?>
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-sm text-center">
+                <div class="error-message">
                     <?= htmlspecialchars($authError) ?>
                 </div>
             <?php endif; ?>
-
             <div class="labels">
                 <div class="labeluser">
                     <p class="label">Correo Electrónico</p>
@@ -84,15 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span id="togglePassword" class="cursor-pointer select-none">🙈</span>
                     </div>
                 </div>
+                
             </div>
 
             <button type="submit" class="btn">Iniciar Sesión</button>
                 
-                <hr class="separador">
+                
 
-            <div class="divider">
-          <span class="divider-text">O inicie sesión con</span>
-            </div>  
+                        <div class="divider">
+                        <hr class="separador">
+                    <span class="divider-text">O inicie sesión con</span>
+                    <hr class="separador">
+                        </div>  
             <div class="social-buttons">
                 <div id="g_id_onload"
                      data-client_id="529275541215-1hacn0m3fhjt9j373kbqttumehhe0ksu.apps.googleusercontent.com"

@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style/sing_up.css">
   <link rel="stylesheet" href="style/styles.css">
+  <link rel="icon" href="../public/nhlogo.png" type="image/png">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
@@ -77,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <?php if ($authError): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-xs text-center">
+            <div class="error-message">
                 <?= htmlspecialchars($authError) ?>
             </div>
         <?php endif; ?>
@@ -118,10 +119,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         </form>
 
-        <hr class="separador">
-
         <div class="divider">
-          <span class="divider-text">O utilice</span>
+          <hr class="separador">
+            <span class="divider-text">O utilice</span>
+          <hr class="separador">
+
         </div>  
         <div class="social-buttons">
             <div id="g_id_onload"

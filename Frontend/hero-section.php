@@ -75,9 +75,17 @@
                     <!-- Glow effect in background -->
                     <div class="absolute inset-0 bg-primary/10 rounded-full blur-3xl opacity-60 animate-pulse"></div>
                     <!-- Logo image -->
-                    <img src="public/NexoHub%20Logo.png" alt="NexoHub Logo" class="relative z-10 w-full h-auto object-contain drop-shadow-[0_15px_30px_rgba(233,69,96,0.35)] transition-transform duration-500 hover:scale-105">
+                    <img src="public/NexoHub%20Logo.png" alt="NexoHub Logo" class="nexologo">
                 </div>
             </div>
         </div>
     </div>
+    <style>
+        .nexologo {
+            width: 100%;
+            height: auto;
+            max-width: 500px;
+            filter: drop-shadow(5px 5px 5px rgba(12, 0, 42, 0.7));
+        }
+    </style>
 </section>

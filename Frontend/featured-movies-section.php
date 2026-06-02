@@ -13,8 +13,18 @@
             <?php else: ?>
                 <?php foreach ($peliculas as $p): ?>
                 <div class="rounded-xl border border-border bg-background p-6 hover:shadow-lg transition-shadow">
-                    <div class="aspect-[2/3] mb-4 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/30 flex items-center justify-center relative overflow-hidden">
-                        <span class="text-4xl">🎥</span>
+                    <div class="aspect-[2/3] mb-4 rounded-lg bg-card flex items-center justify-center relative overflow-hidden">
+                        <?php 
+                        $coverPath = "public/covers/" . (int)$p['id'] . ".png";
+                        $hasCover = file_exists("C:/xampp/htdocs/proyecto7mo/" . $coverPath);
+                        if ($hasCover): 
+                        ?>
+                            <img src="/proyecto7mo/<?= $coverPath ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/30 flex items-center justify-center">
+                                <span class="text-4xl">🎥</span>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <h3 class="text-xl font-semibold text-foreground"><?= htmlspecialchars($p['title']) ?></h3>
                     <p class="text-muted-foreground text-sm mt-1"><?= htmlspecialchars($p['genre'] ?? 'General') ?> • <?= (int) ($p['year'] ?? 2024) ?></p>
