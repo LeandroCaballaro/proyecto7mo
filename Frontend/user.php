@@ -295,8 +295,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         <?php endif; ?>
                     >
 
-                        <?php if(empty($userProfileImage)): ?>
-                            <span></span>
+                    <?php if(empty($userProfileImage)): ?>
+                            <span><?= htmlspecialchars($user_initial) ?></span>
                         <?php endif; ?>
 
                     </div>
@@ -323,7 +323,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 <?php endif; ?>
 >
-                        
+                        <?php if(empty($userProfileImage)): ?>
+                            <span id="profileInitial"><?= htmlspecialchars($user_initial) ?></span>
+                        <?php endif; ?>
                     </div>
                     <button class="btn-cambiar-foto" id="btnCambiarFoto" type="button" title="Cambiar foto de perfil">
                         <div class="camara-overlay">
@@ -495,8 +497,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <label class="setting-toggle theme-toggle">
                                 <input type="checkbox" id="themeToggle">
                                 <span class="toggle-slider theme-slider">
-                                    <span class="toggle-icon sun-icon">☀</span>
-                                    <span class="toggle-icon moon-icon">🌙</span>
+                                    <span class="toggle-icon sun-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="4"></circle>
+                                            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="toggle-icon moon-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M21 14.6A8.4 8.4 0 0 1 9.4 3a8.7 8.7 0 1 0 11.6 11.6Z"></path>
+                                        </svg>
+                                    </span>
                                 </span>
                                 <span class="toggle-label" id="themeLabel">Oscuro</span>
                             </label>
@@ -524,7 +535,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <div class="edit-modal-content">
 
         <button class="close-modal-btn" id="closeModalBtn" type="button">
-            ✕
+            &times;
         </button>
 
         <h2>Editar perfil</h2>
@@ -687,7 +698,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 profileAvatar.style.backgroundSize = 'cover';
                 profileAvatar.style.backgroundPosition = 'center';
 
-                profileInitial.style.opacity = '0';
+                if (profileInitial) {
+                    profileInitial.style.opacity = '0';
+                }
 
                 if(smallAvatar){
                     smallAvatar.style.backgroundImage = `url('${data.image}')`;

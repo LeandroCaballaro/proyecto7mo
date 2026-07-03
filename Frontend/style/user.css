@@ -37,6 +37,8 @@ html[data-theme="light"] .settings-row {
 html[data-theme="light"] .section-card,
 html[data-theme="light"] .stat-card,
 html[data-theme="light"] .descripcion-perfil-wrapper,
+html[data-theme="light"] .stats-perfil-container,
+html[data-theme="light"] .empty-state,
 html[data-theme="light"] .activity-card {
     background: #ffffff;
     border-color: var(--border);
@@ -44,9 +46,44 @@ html[data-theme="light"] .activity-card {
     box-shadow: 0 14px 36px -28px rgba(20, 25, 39, 0.42);
 }
 
+html[data-theme="light"] .perfil-body,
+html[data-theme="light"] .contenido-perfil {
+    background:
+        radial-gradient(circle at top left, rgba(233, 69, 96, 0.08), transparent 34rem),
+        linear-gradient(180deg, #f8faff 0%, var(--background) 45%, #eef2f8 100%);
+}
+
+html[data-theme="light"] .sidebar-estatico,
+html[data-theme="light"] .header-interno {
+    background: rgba(255, 255, 255, 0.86);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+html[data-theme="light"] .descripcion-perfil-wrapper:hover,
+html[data-theme="light"] .descripcion-perfil-wrapper:focus-within {
+    background: #ffffff;
+    border-color: var(--primary);
+}
+
+html[data-theme="light"] .edit-name-btn,
+html[data-theme="light"] .close-modal-btn {
+    background: #ffffff;
+    color: var(--muted-foreground);
+    border: 1px solid var(--border);
+}
+
+html[data-theme="light"] .btn-cambiar-foto {
+    background: #ffffff;
+    color: var(--muted-foreground);
+    border-color: var(--background);
+}
+
 html[data-theme="light"] .section-description,
 html[data-theme="light"] .settings-note,
 html[data-theme="light"] .perfil-correo,
+html[data-theme="light"] .activity-card p,
+html[data-theme="light"] .empty-state,
 html[data-theme="light"] .descripcion-perfil-wrapper input {
     color: var(--muted-foreground);
 }
@@ -101,6 +138,10 @@ html[data-theme="light"] .toggle-slider {
 html[data-theme="light"] .toggle-slider::after {
     background: #ffffff;
     box-shadow: 0 3px 10px rgba(20, 25, 39, 0.22);
+}
+
+html[data-theme="light"] .toggle-icon {
+    color: #5d6b82;
 }
 
 html[data-theme="light"] .toggle-label,
@@ -288,6 +329,13 @@ html[data-theme="light"] .settings-label {
     position: relative;
 }
 
+.content-section:not(#perfil) {
+    width: 100%;
+    min-height: calc(100vh - 64px);
+    padding: 48px 40px 64px;
+    box-sizing: border-box;
+}
+
 /* Barra superior del contenido (Header interno) */
 .header-interno {
     display: flex;
@@ -362,7 +410,7 @@ html[data-theme="light"] .settings-label {
 }
 
 .perfil-seccion-central {
-    max-width:3000px;
+    max-width: 1160px;
     margin: 0 auto;
     width: 100%;
     padding: 48px 24px 64px 24px;
@@ -670,12 +718,11 @@ html[data-theme="light"] .settings-label {
 
 .review-list{
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(178px, 0.1fr));
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
     gap: 20px;
     width: 100%;
     margin-top: 30px;
-    padding-left: 40px;
-    padding-right: 20px;
+    padding: 0;
 }
 
 .movie-card{
@@ -685,6 +732,9 @@ html[data-theme="light"] .settings-label {
     border-radius: 16px;
     overflow: hidden;
     cursor: pointer;
+    background: var(--card);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-premium);
 
     transition:
         transform 0.25s ease,
@@ -746,8 +796,76 @@ html[data-theme="light"] .settings-label {
 }
 
 .section-header {
-    text-align: center;
     width: 100%;
+    margin-bottom: 26px;
+    text-align: left;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: var(--foreground);
+    font-size: clamp(1.7rem, 2.4vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.section-description {
+    max-width: 640px;
+    margin: 8px 0 0;
+    color: var(--muted-foreground);
+    font-size: 0.98rem;
+    line-height: 1.55;
+}
+
+.section-card {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 32px;
+    border-radius: 18px;
+    border: 1px solid var(--border-subtle);
+    background: rgba(22, 33, 62, 0.68);
+    box-shadow: var(--shadow-premium);
+    box-sizing: border-box;
+}
+
+.activity-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+}
+
+.activity-card {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--foreground);
+}
+
+.activity-card p {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    padding: 34px 24px;
+    border-radius: 18px;
+    border: 1px dashed rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted-foreground);
+    text-align: center;
+}
+
+.empty-state p {
+    margin: 0;
 }
 
 .settings-card {
@@ -910,10 +1028,20 @@ html[data-theme="light"] .privacy-option.active {
 }
 
 .toggle-icon {
-    font-size: 0.95rem;
-    line-height: 1;
+    width: 16px;
+    height: 16px;
     color: rgba(255, 255, 255, 0.75);
     transition: opacity 0.8s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.toggle-icon svg {
+    width: 14px;
+    height: 14px;
+    display: block;
 }
 
 .toggle-icon.sun-icon {
@@ -1102,6 +1230,10 @@ html[data-theme="light"] .privacy-option.active {
         margin-left: 0;
         width: 100%;
     }
+
+    .content-section:not(#perfil) {
+        padding: 32px 16px 48px;
+    }
     
     /* Mostrar botón de toggle en cabecera móvil */
     .btn-toggle-movil {
@@ -1140,11 +1272,8 @@ html[data-theme="light"] .privacy-option.active {
         width: 100%;
         max-width: 900px;
         margin: 0 auto;
-        background-color: var(--secondary);
-        border: none;
-        border-radius: 0;
-        padding: 28px 0 0 0;
-        box-shadow: none;
+        border-radius: 18px;
+        padding: 24px;
     }
 
     .section-header {
@@ -1171,6 +1300,7 @@ html[data-theme="light"] .privacy-option.active {
 
     .review-list {
         display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
         gap: 18px;
     }
 
@@ -1203,6 +1333,10 @@ html[data-theme="light"] .privacy-option.active {
         color: var(--muted-foreground);
         text-align: center;
         font-size: 0.98rem;
+    }
+
+    .activity-list {
+        grid-template-columns: 1fr;
     }
 
 
