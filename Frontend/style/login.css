@@ -109,7 +109,7 @@ input::placeholder {
     position: absolute;
     right: 12px;
     top: auto;
-    bottom: 0;
+    bottom: 1px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -121,7 +121,7 @@ input::placeholder {
     background: transparent;
     line-height: 1;
     cursor: pointer;
-    font-size: 22px;
+    font-size: 21px;
 }
 
 .btn{

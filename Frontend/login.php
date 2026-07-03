@@ -96,8 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script>
     const togglePassword = document.querySelector('#togglePassword');
     const password = document.querySelector('#password');
-    const showIcon = '🙉';
-    const hideIcon = '🙈';
+    const showIcon = '🙈';
+    const hideIcon = '🙉';
 
     if (togglePassword && password) {
       togglePassword.textContent = showIcon;
