@@ -87,6 +87,7 @@ body::before {
 .form-group input {
   width: 100%;
   padding: 11px 11px;
+  box-sizing: border-box;
   background-color: #1a1a2e;
   border: 1px solid #0f3460;
   border-radius: 8px;
@@ -118,8 +119,11 @@ body::before {
 .password-toggle {
     position: absolute;
     right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: 11px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
     color: #e94560;
     font-size: 13px;

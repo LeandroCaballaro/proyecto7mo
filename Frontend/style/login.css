@@ -68,6 +68,7 @@ body {
     margin-top: 5px;
     transition: border-color 0.2s, box-shadow 0.2s;
     outline: none;
+    box-sizing: border-box;
 }
 
 .input:focus {
@@ -106,8 +107,11 @@ input::placeholder {
 #togglePassword {
     position: absolute;
     right: 12px;
-    top: 56%;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: 11px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
     color: #e94560;
     font-size: 13px;
