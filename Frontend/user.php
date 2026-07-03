@@ -21,6 +21,20 @@ $userProfileImage = $_SESSION['user']['profile_image'] ?? '';
 $reputation = 0;
 $comments_count = 0;
 $user_reviews = [];
+$user_favorites = [];
+
+function ensure_favorites_table(PDO $db): void
+{
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS favorite_movies (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            movie_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_user_movie_favorite (user_id, movie_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+}
 
 if ($user_id) {
     try {
@@ -74,6 +88,17 @@ SELECT reviews.comment, movies.id AS movie_id, movies.title
 $stmt->execute([$user_id]);
 
 $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+ensure_favorites_table($db);
+$stmt = $db->prepare("
+    SELECT movies.id AS movie_id, movies.title
+    FROM favorite_movies
+    INNER JOIN movies ON favorite_movies.movie_id = movies.id
+    WHERE favorite_movies.user_id = ?
+    ORDER BY movies.title ASC
+");
+$stmt->execute([$user_id]);
+$user_favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // Mantener fallbacks silenciosos en caso de error de BD
     }
@@ -288,6 +313,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         </svg>
                     </span>
                     <span class="nav-label">Mis reseñas</span>
+                </a>
+
+                <a href="#" class="nav-item" data-section="favoritas">
+                    <span class="icon-circle icon-sharing">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Peliculas favoritas</span>
                 </a>
 
                 <!-- Mi Actividad -->
@@ -510,6 +544,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 </section>
 
+<section id="favoritas" class="content-section section-hidden">
+    <div class="section-card">
+        <div class="section-header">
+            <h2>Peliculas favoritas</h2>
+            <p class="section-description">Tus peliculas marcadas con estrella.</p>
+        </div>
+
+        <div class="review-list" id="favoriteList">
+            <?php if (!empty($user_favorites)): ?>
+                <?php foreach ($user_favorites as $favorite): ?>
+                    <?php
+                        $coverPath = '/proyecto7mo/public/covers/' . (int) $favorite['movie_id'] . '.png';
+                        $coverFile = __DIR__ . '/../public/covers/' . (int) $favorite['movie_id'] . '.png';
+                        $poster = file_exists($coverFile)
+                            ? $coverPath
+                            : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
+                    ?>
+
+                    <div class="movie-card">
+                        <img src="<?= htmlspecialchars($poster) ?>" alt="<?= htmlspecialchars($favorite['title']) ?>">
+                        <div class="movie-overlay">
+                            <h3><?= htmlspecialchars($favorite['title']) ?></h3>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="empty-state">
+                    <p>Todavia no agregaste peliculas favoritas.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+
             <section id="actividad" class="perfil-seccion-central content-section section-hidden">
                 <div class="section-card">
                     <div class="section-header">
@@ -707,7 +775,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             initSectionNavigation();
-            showSection('perfil');
+            const initialSection = window.location.hash === '#favoritas' ? 'favoritas' : 'perfil';
+            const initialNav = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
+            if (initialNav) setActiveNav(initialNav);
+            showSection(initialSection);
 
             inputDescripcion.addEventListener('blur', () => {
 

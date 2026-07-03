@@ -1,6 +1,7 @@
 <?php
 session_start();
 define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
+require_once __DIR__ . '/../Backend/models/Database.php';
 
 function api_get($route, $extra = [])
 {
@@ -27,14 +28,58 @@ function api_post($route, $data, $token = null)
 }
 
 $genre = $_GET['genre'] ?? '';
+$q = trim($_GET['q'] ?? '');
 $msg = '';
 $active_movie_id = 0;
+$favoriteMovieIds = [];
+
+function ensure_favorites_table(PDO $db): void
+{
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS favorite_movies (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            movie_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_user_movie_favorite (user_id, movie_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($_SESSION['token'])) {
         $msg = 'Debes iniciar sesión para publicar películas o responder reseñas.';
     } else {
         $action = $_POST['action'] ?? 'submit_review';
+
+        if ($action === 'toggle_favorite') {
+            header('Content-Type: application/json');
+            $userId = (int) ($_SESSION['user']['id'] ?? 0);
+            $movieId = (int) ($_POST['movie_id'] ?? 0);
+
+            if (!$userId || !$movieId) {
+                echo json_encode(['success' => false, 'message' => 'No se pudo guardar el favorito']);
+                exit;
+            }
+
+            try {
+                $db = Database::getInstance()->getConnection();
+                ensure_favorites_table($db);
+                $stmt = $db->prepare("SELECT id FROM favorite_movies WHERE user_id = ? AND movie_id = ? LIMIT 1");
+                $stmt->execute([$userId, $movieId]);
+
+                if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $db->prepare("DELETE FROM favorite_movies WHERE user_id = ? AND movie_id = ?")->execute([$userId, $movieId]);
+                    echo json_encode(['success' => true, 'favorite' => false]);
+                } else {
+                    $db->prepare("INSERT INTO favorite_movies (user_id, movie_id) VALUES (?, ?)")->execute([$userId, $movieId]);
+                    echo json_encode(['success' => true, 'favorite' => true]);
+                }
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'message' => 'No se pudo guardar el favorito']);
+            }
+            exit;
+        }
 
         if ($action === 'create_movie') {
             $res = api_post('movies', [
@@ -69,6 +114,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('movies');
+$peliculas = is_array($peliculas) ? $peliculas : [];
+
+if ($q !== '') {
+    $peliculas = array_values(array_filter($peliculas, function ($movie) use ($q) {
+        return stripos($movie['title'] ?? '', $q) !== false;
+    }));
+}
+
+usort($peliculas, function ($a, $b) {
+    return strcasecmp($a['title'] ?? '', $b['title'] ?? '');
+});
+
+if (!empty($_SESSION['user']['id'])) {
+    try {
+        $db = Database::getInstance()->getConnection();
+        ensure_favorites_table($db);
+        $stmt = $db->prepare("SELECT movie_id FROM favorite_movies WHERE user_id = ?");
+        $stmt->execute([(int) $_SESSION['user']['id']]);
+        $favoriteMovieIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    } catch (Exception $e) {
+        $favoriteMovieIds = [];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -108,6 +176,17 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
 
             <!-- Filtros -->
             <div class="mb-8 flex flex-wrap gap-4">
+                <form method="get" action="/proyecto7mo/Frontend/explorar.php" class="explore-search-form">
+                    <?php if ($genre): ?>
+                        <input type="hidden" name="genre" value="<?= htmlspecialchars($genre) ?>">
+                    <?php endif; ?>
+                    <input id="exploreSearchInput" type="search" name="q" value="<?= htmlspecialchars($q) ?>" class="explore-search-input" placeholder="Buscar pelicula por nombre">
+                    <button type="submit" class="explore-search-button" aria-label="Buscar pelicula">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"></path>
+                        </svg>
+                    </button>
+                </form>
                 <select onchange="location = this.value;" class="rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
                     <option value="explorar.php">Todos los Géneros</option>
                     <?php foreach (api_get('movies/genres') ?: [] as $g): ?>
@@ -116,11 +195,12 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <select class="rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none">
+                <select class="rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none" style="display:none">
                     <option>Ordenar por: Rating</option>
                     <option>Ordenar por: Año</option>
                     <option>Ordenar por: Popularidad</option>
                 </select>
+                <span class="alphabetical-badge">Orden alfabetico</span>
             </div>
 
             <?php if (!empty($_SESSION['user'])): ?>
@@ -203,6 +283,7 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
             <!-- LEFT COLUMN: Movie Poster -->
             <div class="modal-left">
                 <img id="modalMoviePoster" src="" alt="Portada" class="modal-poster-img">
+                <button type="button" id="favoriteMovieBtn" class="favorite-movie-btn" aria-label="Agregar a favoritos">☆</button>
                 <div class="modal-poster-overlay">
                     <span id="modalMovieGenreYear" class="text-xs font-bold text-primary tracking-wide uppercase">GÉNERO • AÑO</span>
                     <h2 id="modalMovieTitle" class="text-2xl md:text-3xl font-extrabold text-foreground mt-1">Título de la Película</h2>
@@ -241,6 +322,7 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
                 year: <?= (int)($p['year'] ?? 2024) ?>,
                 description: <?= json_encode($p['description'] ?? '') ?>,
                 hasCover: <?= file_exists(__DIR__ . '/../public/covers/' . (int)$p['id'] . '.png') ? 'true' : 'false' ?>,
+                favorite: <?= in_array((int) $p['id'], $favoriteMovieIds, true) ? 'true' : 'false' ?>,
                 reviews: [
                     <?php 
                     $reviews = api_get('movies/' . urlencode((int) $p['id']) . '/reviews') ?: [];
@@ -294,6 +376,8 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
         document.getElementById('modalMovieTitle').innerText = movie.title;
         document.getElementById('modalMovieDesc').innerText = movie.description || 'Sin descripción disponible.';
 
+        updateFavoriteButton(movie);
+
         // Render reviews list on the right side
         renderReviewsList(movie);
 
@@ -311,6 +395,48 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
         if (event.target === document.getElementById('movieModalBackdrop')) {
             closeMovieModal();
         }
+    }
+
+    function updateFavoriteButton(movie) {
+        const btn = document.getElementById('favoriteMovieBtn');
+        if (!btn) return;
+
+        btn.dataset.movieId = movie.id;
+        btn.textContent = movie.favorite ? '★' : '☆';
+        btn.classList.toggle('active', !!movie.favorite);
+        btn.title = movie.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
+    }
+
+    async function toggleFavorite(movieId) {
+        if (!currentUser) {
+            window.location.href = '/proyecto7mo/Frontend/login.php';
+            return;
+        }
+
+        const movie = moviesData[movieId];
+        if (!movie) return;
+
+        const response = await fetch('/proyecto7mo/Frontend/explorar.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({
+                action: 'toggle_favorite',
+                movie_id: movieId
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            movie.favorite = !!data.favorite;
+            updateFavoriteButton(movie);
+        }
+    }
+
+    const favoriteMovieBtn = document.getElementById('favoriteMovieBtn');
+    if (favoriteMovieBtn) {
+        favoriteMovieBtn.addEventListener('click', () => {
+            toggleFavorite(favoriteMovieBtn.dataset.movieId);
+        });
     }
 
     // Escape key closes modal
@@ -484,6 +610,12 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
 
     // Auto-open modal on load if activeMovieId is set
     window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('focus') === 'search') {
+            const searchInput = document.getElementById('exploreSearchInput');
+            if (searchInput) searchInput.focus();
+        }
+
         if (activeMovieId > 0) {
             openMovieModal(activeMovieId);
         }

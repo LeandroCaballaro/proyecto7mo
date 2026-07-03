@@ -37,6 +37,60 @@
     font-size: 16px;
 }
 
+.explore-search-form {
+    position: relative;
+    width: min(100%, 420px);
+}
+
+.explore-search-input {
+    width: 100%;
+    height: 42px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--foreground);
+    padding: 0 44px 0 14px;
+    outline: none;
+}
+
+.explore-search-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.16);
+}
+
+.explore-search-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.explore-search-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+.alphabetical-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: rgba(233, 69, 96, 0.08);
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
 /* ==========================================================================
    premium movie cards (flip effects) and modern dual-column modal styles
    ========================================================================== */
@@ -183,6 +237,35 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.favorite-movie-btn {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 6;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(10, 15, 25, 0.72);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.favorite-movie-btn:hover {
+    transform: scale(1.08);
+    background: rgba(10, 15, 25, 0.9);
+}
+
+.favorite-movie-btn.active {
+    color: #fbbc05;
 }
 
 .modal-poster-overlay {
