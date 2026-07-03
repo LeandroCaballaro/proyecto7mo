@@ -101,10 +101,11 @@ input::placeholder {
 }
 
 .password-container input {
-    padding-right: 78px;
+    padding-right: 46px;
 }
 
-#togglePassword {
+#togglePassword,
+.password-toggle {
     position: absolute;
     right: 12px;
     top: calc(50% + 2px);
@@ -112,6 +113,8 @@ input::placeholder {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 24px;
+    height: 24px;
     padding: 0;
     margin: 0;
     border: 0;
@@ -119,8 +122,12 @@ input::placeholder {
     line-height: 1;
     cursor: pointer;
     color: #e94560;
-    font-size: 13px;
-    font-weight: 700;
+}
+
+.password-toggle svg {
+    width: 22px;
+    height: 22px;
+    display: block;
 }
 
 .btn{

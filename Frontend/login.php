@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <p class="label">Contrasena</p>
           <div class="password-container">
             <input type="password" name="password" id="password" class="input" placeholder="Ingrese su contrasena" required>
-            <span id="togglePassword" class="cursor-pointer select-none">Mostrar</span>
+            <span id="togglePassword" class="password-toggle cursor-pointer select-none" role="button" aria-label="Mostrar contrasena"></span>
           </div>
         </div>
       </div>
@@ -96,12 +96,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script>
     const togglePassword = document.querySelector('#togglePassword');
     const password = document.querySelector('#password');
+    const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    const eyeOffIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18"></path><path d="M10.6 10.6A2 2 0 0 0 12 14a2 2 0 0 0 1.4-.6"></path><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-2.3 3.2"></path><path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7a10.7 10.7 0 0 0 4.4-.9"></path></svg>';
 
     if (togglePassword && password) {
+      togglePassword.innerHTML = eyeIcon;
       togglePassword.addEventListener('click', function () {
         const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
         password.setAttribute('type', type);
-        this.textContent = type === 'password' ? 'Mostrar' : 'Ocultar';
+        this.innerHTML = type === 'password' ? eyeIcon : eyeOffIcon;
+        this.setAttribute('aria-label', type === 'password' ? 'Mostrar contrasena' : 'Ocultar contrasena');
       });
     }
   </script>

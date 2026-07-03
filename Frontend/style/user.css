@@ -110,6 +110,18 @@ html[data-theme="light"] .edit-modal-content {
     border: 1px solid var(--border);
 }
 
+html[data-theme="light"] .edit-modal-content h2 {
+    color: var(--foreground);
+}
+
+html[data-theme="light"] .edit-field-label {
+    color: var(--muted-foreground);
+}
+
+html[data-theme="light"] .edit-error-message {
+    color: #b4233d;
+}
+
 html[data-theme="light"] #editName {
     background: #f7fafc;
     color: var(--foreground);
