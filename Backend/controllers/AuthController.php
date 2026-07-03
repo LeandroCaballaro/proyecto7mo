@@ -16,6 +16,7 @@ class AuthController
         $data = $this->body();
         $result = $this->service->register(
             $data['name'] ?? '',
+            $data['username'] ?? '',
             $data['email'] ?? '',
             $data['password'] ?? '',
             $data['confirm_password'] ?? ''

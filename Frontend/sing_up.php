@@ -25,39 +25,43 @@ function api_post($route, $data)
 $authError = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
+    $name = trim($_POST['name'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
     $allowedDomains = ['gmail.com', 'hotmail.com', 'live.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'proton.me'];
     $emailDomain = strtolower(substr(strrchr($email, '@') ?: '', 1));
 
-    if (!empty($name) && !empty($email) && !empty($password) && !empty($confirmPassword)) {
-        if (!in_array($emailDomain, $allowedDomains, true)) {
-            $authError = 'Use un correo de Gmail, Hotmail, Live, Outlook, Yahoo, iCloud o Proton';
-        } elseif ($password !== $confirmPassword) {
-            $authError = 'Las contrasenas no coinciden';
-        } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password)) {
-            $authError = 'La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero';
-        } else {
-            $res = api_post('auth/register', [
-                'name'     => $name,
-                'email'    => $email,
-                'password' => $password,
-                'confirm_password' => $confirmPassword
-            ]);
-
-            if (!empty($res['token'])) {
-                $_SESSION['token'] = $res['token'];
-                $_SESSION['user'] = $res['user'];
-                header('Location: /proyecto7mo/index.php');
-                exit;
-            }
-
-            $authError = $res['error'] ?? 'Error al registrar la cuenta';
-        }
-    } else {
+    if ($name === '' || $username === '' || $email === '' || $password === '' || $confirmPassword === '') {
         $authError = 'Por favor complete todos los campos';
+    } elseif (!preg_match('/^[\p{L}\p{N} ]{1,40}$/u', $name)) {
+        $authError = 'El nombre no puede tener caracteres especiales ni superar los 40 caracteres';
+    } elseif (!preg_match('/^[A-Za-z0-9]{1,20}$/', $username)) {
+        $authError = 'El nombre de usuario solo puede tener letras y numeros, hasta 20 caracteres';
+    } elseif (!in_array($emailDomain, $allowedDomains, true)) {
+        $authError = 'Use un correo de Gmail, Hotmail, Live, Outlook, Yahoo, iCloud o Proton';
+    } elseif ($password !== $confirmPassword) {
+        $authError = 'Las contrasenas no coinciden';
+    } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password)) {
+        $authError = 'La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero';
+    } else {
+        $res = api_post('auth/register', [
+            'name' => $name,
+            'username' => $username,
+            'email' => $email,
+            'password' => $password,
+            'confirm_password' => $confirmPassword,
+        ]);
+
+        if (!empty($res['token'])) {
+            $_SESSION['token'] = $res['token'];
+            $_SESSION['user'] = $res['user'];
+            header('Location: /proyecto7mo/index.php');
+            exit;
+        }
+
+        $authError = $res['error'] ?? 'Error al registrar la cuenta';
     }
 }
 ?>
@@ -91,7 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="/proyecto7mo/Frontend/sing_up.php" class="signup-form">
           <div class="form-group">
             <p class="label">Nombre completo</p>
-            <input type="text" id="name" name="name" placeholder="Nombre completo" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
+            <input type="text" id="name" name="name" placeholder="Nombre completo" required maxlength="40" pattern="[\p{L}\p{N} ]{1,40}" title="Solo letras, numeros y espacios. Maximo 40 caracteres" value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
+          </div>
+
+          <div class="form-group">
+            <p class="label">Nombre de Usuario</p>
+            <input type="text" id="username" name="username" placeholder="Nombre de Usuario" required maxlength="20" pattern="[A-Za-z0-9]{1,20}" title="Solo letras y numeros. Maximo 20 caracteres" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
           </div>
 
           <div class="form-group">
@@ -148,16 +157,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     const signupForm = document.querySelector('.signup-form');
+    const nameInput = document.querySelector('#name');
+    const username = document.querySelector('#username');
     const email = document.querySelector('#email');
     const allowedDomains = ['gmail.com', 'hotmail.com', 'live.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'proton.me'];
 
-    if (signupForm && email && password && confirmPassword) {
+    if (signupForm && nameInput && username && email && password && confirmPassword) {
+      nameInput.addEventListener('input', () => nameInput.setCustomValidity(''));
+      username.addEventListener('input', () => username.setCustomValidity(''));
       email.addEventListener('input', () => email.setCustomValidity(''));
       confirmPassword.addEventListener('input', () => confirmPassword.setCustomValidity(''));
       password.addEventListener('input', () => confirmPassword.setCustomValidity(''));
 
       signupForm.addEventListener('submit', function (event) {
         const domain = email.value.split('@').pop().toLowerCase();
+        const namePattern = /^[\p{L}\p{N} ]{1,40}$/u;
+        const usernamePattern = /^[A-Za-z0-9]{1,20}$/;
+
+        if (!namePattern.test(nameInput.value.trim())) {
+          nameInput.setCustomValidity('Solo letras, numeros y espacios. Maximo 40 caracteres.');
+        } else {
+          nameInput.setCustomValidity('');
+        }
+
+        if (!usernamePattern.test(username.value.trim())) {
+          username.setCustomValidity('Solo letras y numeros. Maximo 20 caracteres.');
+        } else {
+          username.setCustomValidity('');
+        }
 
         if (!allowedDomains.includes(domain)) {
           email.setCustomValidity('Use Gmail, Hotmail, Live, Outlook, Yahoo, iCloud o Proton.');

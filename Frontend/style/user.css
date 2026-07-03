@@ -82,6 +82,7 @@ html[data-theme="light"] .btn-cambiar-foto {
 html[data-theme="light"] .section-description,
 html[data-theme="light"] .settings-note,
 html[data-theme="light"] .perfil-correo,
+html[data-theme="light"] .perfil-username,
 html[data-theme="light"] .activity-card p,
 html[data-theme="light"] .empty-state,
 html[data-theme="light"] .descripcion-perfil-wrapper input {
@@ -115,7 +116,14 @@ html[data-theme="light"] #editName {
     border: 1px solid var(--border);
 }
 
-html[data-theme="light"] #editName::placeholder {
+html[data-theme="light"] #editUsername {
+    background: #f7fafc;
+    color: var(--foreground);
+    border: 1px solid var(--border);
+}
+
+html[data-theme="light"] #editName::placeholder,
+html[data-theme="light"] #editUsername::placeholder {
     color: var(--muted-foreground);
 }
 
@@ -544,6 +552,13 @@ html[data-theme="light"] .settings-label {
     color: var(--muted-foreground);
     margin: 0 0 32px 0;
     font-weight: 400;
+}
+
+.perfil-username {
+    font-size: 0.95rem;
+    color: var(--primary);
+    margin: -2px 0 6px 0;
+    font-weight: 700;
 }
 
 /* Descripción de Cuenta */
@@ -1127,7 +1142,8 @@ html[data-theme="light"] .privacy-option.active {
     color:white;
 }
 
-#editName{
+#editName,
+#editUsername{
     width:100%;
     height:52px;
 
@@ -1148,17 +1164,37 @@ html[data-theme="light"] .privacy-option.active {
     box-sizing:border-box;
 }
 
-#editName::placeholder{
+#editName::placeholder,
+#editUsername::placeholder{
     color:rgba(255,255,255,0.4);
 }
 
-#editName:focus{
+#editName:focus,
+#editUsername:focus{
     border-color:#e94560;
 
     background:rgba(255,255,255,0.06);
 
     box-shadow:
         0 0 0 4px rgba(233,69,96,0.12);
+}
+
+.edit-field-label {
+    margin-bottom: -10px;
+    color: var(--muted-foreground);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.edit-error-message {
+    min-height: 18px;
+    margin: -4px 0 0;
+    color: #ff8da0;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    text-align: center;
 }
 
 #saveProfileChanges{

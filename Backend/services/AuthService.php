@@ -22,13 +22,20 @@ class AuthService
         'proton.me',
     ];
 
-    public function register(string $name, string $email, string $password, string $confirmPassword = ''): array
+    public function register(string $name, string $username, string $email, string $password, string $confirmPassword = ''): array
     {
         $name = trim($name);
+        $username = trim($username);
         $email = trim($email);
 
-        if ($name === '') {
-            return ['error' => 'El nombre es obligatorio'];
+        $nameError = $this->validateDisplayName($name);
+        if ($nameError) {
+            return ['error' => $nameError];
+        }
+
+        $usernameError = $this->validateUsername($username);
+        if ($usernameError) {
+            return ['error' => $usernameError];
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -51,11 +58,15 @@ class AuthService
             return ['error' => 'El email ya esta registrado'];
         }
 
+        if ($this->userModel->findByUsername($username)) {
+            return ['error' => 'El nombre de usuario ya esta en uso'];
+        }
+
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        $userId = $this->userModel->create($name, $email, $hash);
+        $userId = $this->userModel->create($name, $username, $email, $hash);
         $this->userModel->ensureReviewer($userId, $name);
 
-        return $this->buildSession($userId, $name, $email);
+        return $this->buildSession($userId, $name, $username, $email);
     }
 
     public function login(string $email, string $password): array
@@ -66,7 +77,7 @@ class AuthService
             return ['error' => 'Credenciales incorrectas'];
         }
 
-        return $this->buildSession((int) $user['id'], $user['name'], $user['email']);
+        return $this->buildSession((int) $user['id'], $user['name'], $user['username'] ?? '', $user['email']);
     }
 
     public function logout(?string $token): array
@@ -88,7 +99,7 @@ class AuthService
         return $this->userModel->findByToken($token);
     }
 
-    private function buildSession(int $userId, string $name, string $email): array
+    private function buildSession(int $userId, string $name, string $username, string $email): array
     {
         $token = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', strtotime("+{$this->tokenTtlDays} days"));
@@ -99,6 +110,7 @@ class AuthService
             'user' => [
                 'id' => $userId,
                 'name' => $name,
+                'username' => $username,
                 'email' => $email,
             ],
             'token' => $token,
@@ -118,5 +130,39 @@ class AuthService
             && preg_match('/[A-Z]/', $password)
             && preg_match('/[a-z]/', $password)
             && preg_match('/[0-9]/', $password);
+    }
+
+    private function validateDisplayName(string $name): ?string
+    {
+        if ($name === '') {
+            return 'El nombre es obligatorio';
+        }
+
+        if (mb_strlen($name, 'UTF-8') > 40) {
+            return 'El nombre no puede superar los 40 caracteres';
+        }
+
+        if (!preg_match('/^[\p{L}\p{N} ]+$/u', $name)) {
+            return 'El nombre no puede tener caracteres especiales';
+        }
+
+        return null;
+    }
+
+    private function validateUsername(string $username): ?string
+    {
+        if ($username === '') {
+            return 'El nombre de usuario es obligatorio';
+        }
+
+        if (strlen($username) > 20) {
+            return 'El nombre de usuario no puede superar los 20 caracteres';
+        }
+
+        if (!preg_match('/^[A-Za-z0-9]+$/', $username)) {
+            return 'El nombre de usuario solo puede tener letras y numeros';
+        }
+
+        return null;
     }
 }

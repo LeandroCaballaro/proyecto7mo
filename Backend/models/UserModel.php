@@ -18,9 +18,18 @@ class UserModel
     public function findByEmail(string $email)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, email, password_hash FROM users WHERE email = ? LIMIT 1"
+            "SELECT id, name, username, email, password_hash FROM users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([trim($email)]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function findByUsername(string $username)
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT id, name, username, email FROM users WHERE username = ? LIMIT 1"
+        );
+        $stmt->execute([trim($username)]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -30,7 +39,7 @@ class UserModel
     public function findById(int $id)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, email FROM users WHERE id = ? LIMIT 1"
+            "SELECT id, name, username, email FROM users WHERE id = ? LIMIT 1"
         );
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -39,12 +48,12 @@ class UserModel
     /**
      * Crea un nuevo usuario. Retorna el ID insertado.
      */
-    public function create(string $name, string $email, string $passwordHash): int
+    public function create(string $name, string $username, string $email, string $passwordHash): int
     {
         $stmt = $this->pdo->prepare(
-            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)"
+            "INSERT INTO users (name, username, email, password_hash) VALUES (?, ?, ?, ?)"
         );
-        $stmt->execute([$name, $email, $passwordHash]);
+        $stmt->execute([$name, $username, $email, $passwordHash]);
         return (int) $this->pdo->lastInsertId();
     }
 
@@ -64,7 +73,7 @@ class UserModel
     public function findByToken(string $token)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT u.id, u.name, u.email
+            "SELECT u.id, u.name, u.username, u.email
              FROM api_tokens t
              JOIN users u ON u.id = t.user_id
              WHERE t.token = ? AND t.expires_at > NOW()
@@ -103,5 +112,16 @@ class UserModel
                 "INSERT INTO reviewers (user_id, name, reputation) VALUES (?, ?, 0)"
             )->execute([$userId, $name]);
         }
+    }
+
+    public function updateProfile(int $userId, string $name, string $username): void
+    {
+        $this->pdo->prepare(
+            "UPDATE users SET name = ?, username = ? WHERE id = ?"
+        )->execute([$name, $username, $userId]);
+
+        $this->pdo->prepare(
+            "UPDATE reviewers SET name = ? WHERE user_id = ?"
+        )->execute([$name, $userId]);
     }
 }

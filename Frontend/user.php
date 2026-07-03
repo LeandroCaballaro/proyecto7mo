@@ -9,6 +9,7 @@ if (empty($_SESSION['user'])) {
 require_once __DIR__ . '/../Backend/models/Database.php';
 
 $user_name = $_SESSION['user']['name'];
+$user_username = $_SESSION['user']['username'] ?? '';
 $user_email = $_SESSION['user']['email'];
 $user_id = $_SESSION['user']['id'] ?? null;
 
@@ -25,16 +26,18 @@ if ($user_id) {
     try {
         $db = Database::getInstance()->getConnection();
 
-        $stmt = $db->prepare("SELECT name, email, description, profile_image FROM users WHERE id = ? LIMIT 1");
+        $stmt = $db->prepare("SELECT name, username, email, description, profile_image FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$user_id]);
         $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($userRow) {
             $user_name = $userRow['name'] ?: $user_name;
+            $user_username = $userRow['username'] ?? $user_username;
             $user_email = $userRow['email'] ?: $user_email;
             $user_description = $userRow['description'] ?? '';
             $userProfileImage = $userRow['profile_image'] ?? '';
             $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
             $_SESSION['user']['name'] = $user_name;
+            $_SESSION['user']['username'] = $user_username;
             $_SESSION['user']['email'] = $user_email;
             $_SESSION['user']['profile_image'] = $userProfileImage;
         }
@@ -102,20 +105,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-    // NOMBRE
-    if ($_POST['action'] === 'update_name') {
-        $name = $_POST['name'] ?? '';
+    // PERFIL
+    if ($_POST['action'] === 'update_profile') {
+        $name = trim($_POST['name'] ?? '');
+        $username = trim($_POST['username'] ?? '');
+
+        if (!preg_match('/^[\p{L}\p{N} ]{1,40}$/u', $name)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'El nombre no puede tener caracteres especiales ni superar los 40 caracteres'
+            ]);
+            exit;
+        }
+
+        if (!preg_match('/^[A-Za-z0-9]{1,20}$/', $username)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'El nombre de usuario solo puede tener letras y numeros, hasta 20 caracteres'
+            ]);
+            exit;
+        }
+
+        $stmt = $db->prepare("
+            SELECT id
+            FROM users
+            WHERE username = ? AND id <> ?
+            LIMIT 1
+        ");
+        $stmt->execute([$username, $user_id]);
+
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'El nombre de usuario ya esta en uso'
+            ]);
+            exit;
+        }
+
         $stmt = $db->prepare("
             UPDATE users
-            SET name = ?
+            SET name = ?, username = ?
             WHERE id = ?
+        ");
+        $stmt->execute([$name, $username, $user_id]);
+
+        $stmt = $db->prepare("
+            UPDATE reviewers
+            SET name = ?
+            WHERE user_id = ?
         ");
         $stmt->execute([$name, $user_id]);
 
         $_SESSION['user']['name'] = $name;
+        $_SESSION['user']['username'] = $username;
 
         echo json_encode([
-            'success' => true
+            'success' => true,
+            'name' => $name,
+            'username' => $username
         ]);
         exit;
     }
@@ -357,6 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     </button>
 
                 </div>
+                <p class="perfil-username" id="profileUsername">@<?= htmlspecialchars($user_username) ?></p>
                 <p class="perfil-correo"><?= htmlspecialchars($user_email) ?></p>
 
                 <!-- Estadísticas del usuario -->
@@ -539,11 +587,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </button>
 
         <h2>Editar perfil</h2>
+        <label class="edit-field-label" for="editName">Nombre</label>
         <input 
             type="text" 
             id="editName" 
             placeholder="Nuevo nombre"
+            maxlength="40"
+            pattern="[\p{L}\p{N} ]{1,40}"
         >
+
+        <label class="edit-field-label" for="editUsername">Nombre de Usuario</label>
+        <input 
+            type="text" 
+            id="editUsername" 
+            placeholder="Nombre de Usuario"
+            maxlength="20"
+            pattern="[A-Za-z0-9]{1,20}"
+        >
+
+        <p class="edit-error-message" id="editProfileError"></p>
 
         <button type="button" id="saveProfileChanges">
             Guardar cambios
@@ -576,8 +638,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const editModal = document.getElementById('editModal');
             const saveProfileChanges = document.getElementById('saveProfileChanges');
             const editName = document.getElementById('editName');
+            const editUsername = document.getElementById('editUsername');
+            const editProfileError = document.getElementById('editProfileError');
             const closeModalBtn = document.getElementById('closeModalBtn');
             const profileName = document.getElementById('profileName');
+            const profileUsername = document.getElementById('profileUsername');
             const profileDescription = document.getElementById('profileDescription');
 
             const showSection = (sectionId) => {
@@ -742,8 +807,23 @@ if(saveProfileChanges){
     saveProfileChanges.addEventListener('click', () => {
 
         const newName = editName.value.trim();
+        const newUsername = editUsername.value.trim();
+        const namePattern = /^[\p{L}\p{N} ]{1,40}$/u;
+        const usernamePattern = /^[A-Za-z0-9]{1,20}$/;
 
-        if(!newName) return;
+        if (editProfileError) {
+            editProfileError.textContent = '';
+        }
+
+        if(!namePattern.test(newName)){
+            if (editProfileError) editProfileError.textContent = 'El nombre solo puede tener letras, numeros y espacios. Maximo 40 caracteres.';
+            return;
+        }
+
+        if(!usernamePattern.test(newUsername)){
+            if (editProfileError) editProfileError.textContent = 'El nombre de usuario solo puede tener letras y numeros. Maximo 20 caracteres.';
+            return;
+        }
 
         fetch('/proyecto7mo/Frontend/user.php', {
             method: 'POST',
@@ -751,16 +831,20 @@ if(saveProfileChanges){
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: new URLSearchParams({
-                action: 'update_name',
-                name: newName
+                action: 'update_profile',
+                name: newName,
+                username: newUsername
             })
         })
         .then(res => res.json())
         .then(data => {
 
             if(data.success){
-                profileName.textContent = newName;
+                profileName.textContent = data.name;
+                if (profileUsername) profileUsername.textContent = '@' + data.username;
                 editModal.classList.remove('show');
+            } else if (editProfileError) {
+                editProfileError.textContent = data.message || 'No se pudo actualizar el perfil.';
             }
 
         });
@@ -771,17 +855,20 @@ if(saveProfileChanges){
 
 if (editProfileBtn && editModal) {
 editProfileBtn.addEventListener('click', () => {
+    if (editName && profileName) editName.value = profileName.textContent.trim();
+    if (editUsername && profileUsername) editUsername.value = profileUsername.textContent.replace(/^@/, '').trim();
+    if (editProfileError) editProfileError.textContent = '';
     editModal.classList.toggle('show');
 
 });
 }
-if(editName){
-    editName.addEventListener('keydown', (e) => {
+if(editName || editUsername){
+    [editName, editUsername].forEach((field) => field && field.addEventListener('keydown', (e) => {
         if(e.key === 'Enter'){
             e.preventDefault();
             saveProfileChanges.click();
         }
-    });
+    }));
 }
 if(closeModalBtn){
 closeModalBtn.addEventListener('click', () => {
