@@ -362,26 +362,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </div>
 
                 <div class="header-acciones">
-
-                    <div class="avatar-pequeno"
-
-                        <?php if(!empty($userProfileImage)): ?>
-
-                            style="
-                                background-image:url('<?= htmlspecialchars($userProfileImage) ?>');
-                                background-size:cover;
-                                background-position:center;
-                            "
-
-                        <?php endif; ?>
-                    >
-
-                    <?php if(empty($userProfileImage)): ?>
-                            <span><?= htmlspecialchars($user_initial) ?></span>
-                        <?php endif; ?>
-
-                    </div>
-
+                    <a href="/proyecto7mo/index.php" class="profile-home-btn" title="Volver al inicio">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5z"/>
+                        </svg>
+                        <span>Home</span>
+                    </a>
                 </div>
             </header>
 
@@ -697,7 +683,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const inputFotoPerfil = document.getElementById('inputFotoPerfil');
             const profileAvatar = document.getElementById('profileAvatar');
             const profileInitial = document.getElementById('profileInitial');
-            const smallAvatar = document.querySelector('.avatar-pequeno');
             const themeToggle = document.getElementById('themeToggle');
             const themeLabel = document.getElementById('themeLabel');
             const privacyOptions = document.querySelectorAll('.privacy-option');
@@ -836,12 +821,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 if (profileInitial) {
                     profileInitial.style.opacity = '0';
-                }
-
-                if(smallAvatar){
-                    smallAvatar.style.backgroundImage = `url('${data.image}')`;
-                    smallAvatar.style.backgroundSize = 'cover';
-                    smallAvatar.style.backgroundPosition = 'center';
                 }
 
             }
