@@ -139,25 +139,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const toggleConfirmPassword = document.querySelector('#toggleConfirmPassword');
     const password = document.querySelector('#password');
     const confirmPassword = document.querySelector('#confirmPassword');
-    const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
-    const eyeOffIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18"></path><path d="M10.6 10.6A2 2 0 0 0 12 14a2 2 0 0 0 1.4-.6"></path><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-2.3 3.2"></path><path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7a10.7 10.7 0 0 0 4.4-.9"></path></svg>';
+    const showIcon = '🙉';
+    const hideIcon = '🙈';
 
     if (togglePassword && password) {
-      togglePassword.innerHTML = eyeIcon;
+      togglePassword.textContent = showIcon;
       togglePassword.addEventListener('click', function () {
         const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
         password.setAttribute('type', type);
-        this.innerHTML = type === 'password' ? eyeIcon : eyeOffIcon;
+        this.textContent = type === 'password' ? showIcon : hideIcon;
         this.setAttribute('aria-label', type === 'password' ? 'Mostrar contrasena' : 'Ocultar contrasena');
       });
     }
 
     if (toggleConfirmPassword && confirmPassword) {
-      toggleConfirmPassword.innerHTML = eyeIcon;
+      toggleConfirmPassword.textContent = showIcon;
       toggleConfirmPassword.addEventListener('click', function () {
         const type = confirmPassword.getAttribute('type') === 'password' ? 'text' : 'password';
         confirmPassword.setAttribute('type', type);
-        this.innerHTML = type === 'password' ? eyeIcon : eyeOffIcon;
+        this.textContent = type === 'password' ? showIcon : hideIcon;
         this.setAttribute('aria-label', type === 'password' ? 'Mostrar contrasena' : 'Ocultar contrasena');
       });
     }
