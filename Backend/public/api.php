@@ -12,8 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/MoviesController.php';
 
-$route  = isset($_GET['route']) ? trim($_GET['route'], '/') : '';
-$parts  = $route === '' ? [] : explode('/', $route);
+$route = isset($_GET['route']) ? trim($_GET['route'], '/') : '';
+$parts = $route === '' ? [] : explode('/', $route);
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($parts === []) {
@@ -22,15 +22,9 @@ if ($parts === []) {
     exit;
 }
 
-// ── AUTH ──────────────────────────────────────────────────────────────────────
-// POST   /auth/register   → Crear cuenta nueva
-// POST   /auth/login      → Iniciar sesión
-// POST   /auth/logout     → Cerrar sesión (requiere Bearer token)
-// GET    /auth/me         → Datos del usuario autenticado
-// ─────────────────────────────────────────────────────────────────────────────
 if ($parts[0] === 'auth') {
     $auth = new AuthController();
-    $sub  = $parts[1] ?? '';
+    $sub = $parts[1] ?? '';
 
     if ($sub === 'register' && $method === 'POST') {
         $auth->register();
@@ -40,9 +34,6 @@ if ($parts[0] === 'auth') {
         $auth->login();
     }
 
-    if ($sub === 'google' && $method === 'POST') {
-        $auth->googleLogin();
-    }
     if ($sub === 'logout' && $method === 'POST') {
         $auth->logout();
     }
@@ -51,22 +42,18 @@ if ($parts[0] === 'auth') {
         $auth->me();
     }
 
-    // Sub-ruta de auth no reconocida
     http_response_code(404);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['error' => 'Ruta de auth no encontrada']);
     exit;
 }
 
-// ── MOVIES & REVIEWS ─────────────────────────────────────────────────────────
 $api = new MoviesController();
 
-// Reseñadores
 if ($parts[0] === 'reviewers') {
     $api->reviewers();
 }
 
-// Reseñas
 if ($parts[0] === 'reviews') {
     if ($method === 'POST' && isset($parts[1], $parts[2]) && $parts[2] === 'responses' && is_numeric($parts[1])) {
         $api->addReviewResponse((int) $parts[1]);
@@ -79,7 +66,6 @@ if ($parts[0] === 'reviews') {
     }
 }
 
-// Películas
 if ($parts[0] === 'movies') {
     if ($method === 'POST' && count($parts) === 1) {
         $api->createMovie();
@@ -104,7 +90,6 @@ if ($parts[0] === 'movies') {
     }
 }
 
-// ── 404 ───────────────────────────────────────────────────────────────────────
 http_response_code(404);
 header('Content-Type: application/json; charset=utf-8');
 echo json_encode(['error' => 'Recurso no encontrado']);

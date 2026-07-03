@@ -11,18 +11,14 @@ class AuthController
         $this->service = new AuthService();
     }
 
-    // -------------------------------------------------------------------------
-    // POST /auth/register
-    // Body JSON: { "name": "...", "email": "...", "password": "..." }
-    // -------------------------------------------------------------------------
     public function register(): void
     {
         $data = $this->body();
-
         $result = $this->service->register(
-            $data['name']     ?? '',
-            $data['email']    ?? '',
-            $data['password'] ?? ''
+            $data['name'] ?? '',
+            $data['email'] ?? '',
+            $data['password'] ?? '',
+            $data['confirm_password'] ?? ''
         );
 
         if (isset($result['error'])) {
@@ -32,16 +28,11 @@ class AuthController
         $this->json($result, 201);
     }
 
-    // -------------------------------------------------------------------------
-    // POST /auth/login
-    // Body JSON: { "email": "...", "password": "..." }
-    // -------------------------------------------------------------------------
     public function login(): void
     {
         $data = $this->body();
-
         $result = $this->service->login(
-            $data['email']    ?? '',
+            $data['email'] ?? '',
             $data['password'] ?? ''
         );
 
@@ -52,64 +43,30 @@ class AuthController
         $this->json($result);
     }
 
-    // -------------------------------------------------------------------------
-    // POST /auth/logout
-    // Header: Authorization: Bearer <token>
-    // -------------------------------------------------------------------------
     public function logout(): void
     {
         $result = $this->service->logout($this->bearerToken());
-        $code   = isset($result['error']) ? 400 : 200;
-        $this->json($result, $code);
+        $this->json($result, isset($result['error']) ? 400 : 200);
     }
 
-    // -------------------------------------------------------------------------
-    // GET /auth/me
-    // Header: Authorization: Bearer <token>
-    // -------------------------------------------------------------------------
     public function me(): void
     {
         $user = $this->service->me($this->bearerToken());
 
         if (!$user) {
-            $this->json(['error' => 'No autorizado. Token inválido o expirado.'], 401);
+            $this->json(['error' => 'No autorizado. Token invalido o expirado.'], 401);
         }
 
         $this->json(['user' => $user]);
     }
 
-    // -------------------------------------------------------------------------
-    // POST /auth/google
-    // Body JSON: { "name": "...", "email": "..." }
-    // -------------------------------------------------------------------------
-    public function googleLogin(): void
-    {
-        $data = $this->body();
-        $result = $this->service->googleLogin(
-            $data['name']  ?? 'Usuario',
-            $data['email'] ?? ''
-        );
-
-        if (isset($result['error'])) {
-            $this->json($result, 400);
-        }
-
-        $this->json($result);
-    }
-
-    // -------------------------------------------------------------------------
-    // Helpers privados
-    // -------------------------------------------------------------------------
-
-    /** Lee el cuerpo de la petición como JSON o form-data */
     private function body(): array
     {
-        $raw  = file_get_contents('php://input');
+        $raw = file_get_contents('php://input');
         $data = json_decode($raw, true);
         return is_array($data) ? $data : ($_POST ?: []);
     }
 
-    /** Extrae el token del header Authorization: Bearer <token> */
     private function bearerToken(): ?string
     {
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
@@ -117,13 +74,14 @@ class AuthController
             $headers = apache_request_headers();
             $header = $headers['Authorization'] ?? $headers['authorization'] ?? $header;
         }
+
         if (preg_match('/Bearer\s+(\S+)/i', $header, $matches)) {
             return $matches[1];
         }
+
         return null;
     }
 
-    /** Responde con JSON y termina la ejecución */
     private function json(array $data, int $code = 200): void
     {
         http_response_code($code);

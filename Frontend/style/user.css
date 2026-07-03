@@ -1,62 +1,67 @@
 /* Variables locales y extensiones */
 :root {
-    --bg-accent-translucent: rgba(233, 69, 96, 0.12); /* Transparencia del primario */
+    --bg-accent-translucent: rgba(233, 69, 96, 0.12);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
     --border-subtle: rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="light"] {
-    /* Fondo principal: Un tono "hueso/antracita ultra claro" que descansa la vista */
-    --background: #F5F5F5;          
-    --foreground: #131926;          /* Texto principal: Azul noche muy oscuro (no negro puro) */
-
-    /* Tarjetas y Contenedores: Aquí sí usamos un blanco suave para generar profundidad */
-    --card: #F5F5F5;                
-    --card-foreground: #131926;     
-
-    /* Colores de Marca: Mantenemos el contraste de NexoHub de forma sutil */
-    --primary: #e94560;             /* Tu rosa/carmín característico */
-    --primary-foreground: #F5F5F5;
-
-    --secondary: #F5F5F5;           /* Separadores y fondos secundarios blandos */
+    --background: #f4f6fb;
+    --foreground: #141927;
+    --card: #ffffff;
+    --card-foreground: #141927;
+    --primary: #e94560;
+    --primary-foreground: #ffffff;
+    --secondary: #edf1f7;
     --secondary-foreground: #1e293b;
-
-    /* Textos secundarios (descripciones, placeholders, etc.) */
-    --muted: #F5F5F5;
-    --muted-foreground: #627289;    /* Gris azulado intermedio, muy legible */
-
-    /* Bordes limpios sin estridencias */
-    --border: rgba(19, 25, 38, 0.08);        
-    --border-subtle: rgba(19, 25, 38, 0.04);
-
-    /* Transparencia adaptada para los botones activos en el Sidebar */
-    --bg-accent-translucent: rgba(233, 69, 96, 0.09); 
+    --muted: #e9edf5;
+    --muted-foreground: #5d6b82;
+    --border: rgba(20, 25, 39, 0.12);
+    --border-subtle: rgba(20, 25, 39, 0.08);
+    --bg-accent-translucent: rgba(233, 69, 96, 0.10);
 }
-/* Correcciones estructurales para el modo claro de NexoHub */
 
 html[data-theme="light"] .settings-card {
-    background-color: var(--card);
+    background-color: #ffffff;
     border: 1px solid var(--border);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 18px 40px -24px rgba(20, 25, 39, 0.35);
 }
 
 html[data-theme="light"] .settings-row {
-    background: #edf2f7; /* Un gris sutil que resalta del fondo blanco de la tarjeta */
-    border: 1px solid var(--border-subtle);
+    background: #f7f9fd;
+    border: 1px solid var(--border);
+    color: var(--foreground);
+}
+
+html[data-theme="light"] .section-card,
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .descripcion-perfil-wrapper,
+html[data-theme="light"] .activity-card {
+    background: #ffffff;
+    border-color: var(--border);
+    color: var(--foreground);
+    box-shadow: 0 14px 36px -28px rgba(20, 25, 39, 0.42);
+}
+
+html[data-theme="light"] .section-description,
+html[data-theme="light"] .settings-note,
+html[data-theme="light"] .perfil-correo,
+html[data-theme="light"] .descripcion-perfil-wrapper input {
+    color: var(--muted-foreground);
 }
 
 html[data-theme="light"] .nav-item {
-    color: #4a5568; /* Texto de los botones no seleccionados en el menú lateral */
+    color: #4a5568;
 }
 
 html[data-theme="light"] .nav-item:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+    background-color: rgba(20, 25, 39, 0.05);
 }
 
 html[data-theme="light"] .nav-item.active {
     background-color: var(--bg-accent-translucent);
-    color: var(--primary); /* El texto del ítem activo pasa a ser rosa carmín */
+    color: var(--primary);
     font-weight: 600;
     border: 1px solid rgba(199, 71, 92, 0.15);
 }
@@ -77,7 +82,6 @@ html[data-theme="light"] #editName::placeholder {
     color: var(--muted-foreground);
 }
 
-/* Ajustes para las opciones de privacidad */
 html[data-theme="light"] .privacy-option {
     background: #ffffff;
     border: 1px solid var(--border);
@@ -85,14 +89,29 @@ html[data-theme="light"] .privacy-option {
 }
 
 html[data-theme="light"] .privacy-option:hover {
-    background: rgba(233, 69, 96, 0.05);
+    background: rgba(233, 69, 96, 0.06);
     color: var(--primary);
+}
+
+html[data-theme="light"] .toggle-slider {
+    background: #d9e1ec;
+    border: 1px solid rgba(20, 25, 39, 0.12);
+}
+
+html[data-theme="light"] .toggle-slider::after {
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(20, 25, 39, 0.22);
+}
+
+html[data-theme="light"] .toggle-label,
+html[data-theme="light"] .settings-label {
+    color: var(--foreground);
 }
 
 .perfil-body {
     margin: 0;
     padding: 0;
-    font-family: 'Outfit', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     background-color: var(--background);
     color: var(--foreground);
     min-height: 100vh;
@@ -736,9 +755,9 @@ html[data-theme="light"] .privacy-option:hover {
     max-width: 1100px;
     margin: 0 auto;
     padding: 32px 20px;
-    background-color:rgba(36, 41, 86, 0.462);
-    border: 1px solid rgb(16, 8, 111);
-    border-radius: 24px;
+    background-color: rgba(22, 33, 62, 0.72);
+    border: 1px solid var(--border);
+    border-radius: 16px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -755,10 +774,10 @@ html[data-theme="light"] .privacy-option:hover {
     gap: 20px;
 
     padding: 20px 24px;
-    border-radius: 24px;
+    border-radius: 14px;
 
-    background: rgba(76, 45, 177, 0.21);
-    border: 1px solid rgba(32, 66, 167, 0.444);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .settings-card-long {
@@ -784,7 +803,7 @@ html[data-theme="light"] .privacy-option:hover {
 }
 
 .privacy-options {
-    margin: 0 30px;
+    margin: 0;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
@@ -823,13 +842,20 @@ html[data-theme="light"] .privacy-option:hover {
     transform: scale(1.03);
 }
 
+html[data-theme="light"] .privacy-option.active {
+    background: var(--primary) !important;
+    color: #ffffff;
+    border-color: rgba(233, 69, 96, 0.35);
+}
+
 .setting-toggle {
     position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
-    transform: translateX(-26.5%);
+    min-width: 128px;
+    justify-content: flex-end;
 }
 
 .setting-toggle input {
@@ -844,6 +870,7 @@ html[data-theme="light"] .privacy-option:hover {
     height: 30px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 
     position: relative;
     display: inline-flex;
@@ -853,6 +880,13 @@ html[data-theme="light"] .privacy-option:hover {
     padding: 0 8px;
     box-sizing: border-box;
     transition: background 0.18s ease;
+}
+
+.toggle-label {
+    min-width: 46px;
+    color: var(--foreground);
+    font-size: 0.92rem;
+    font-weight: 700;
 }
 
 .toggle-slider::after {
@@ -1176,5 +1210,35 @@ html[data-theme="light"] .privacy-option:hover {
     /* Overlay se activa en móvil */
     .sidebar-overlay-movil.show {
         display: block;
+    }
+}
+
+@media (max-width: 700px) {
+    .settings-card {
+        padding: 18px;
+        gap: 14px;
+    }
+
+    .settings-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 16px;
+        padding: 18px;
+    }
+
+    .settings-card-title {
+        max-width: none;
+        width: 100%;
+    }
+
+    .setting-toggle {
+        width: 100%;
+        min-width: 0;
+        justify-content: space-between;
+    }
+
+    .privacy-options {
+        width: 100%;
+        justify-content: flex-start;
     }
 }

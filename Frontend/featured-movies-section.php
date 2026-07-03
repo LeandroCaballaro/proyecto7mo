@@ -16,7 +16,7 @@
                     <div class="aspect-[2/3] mb-4 rounded-lg bg-card flex items-center justify-center relative overflow-hidden">
                         <?php 
                         $coverPath = "public/covers/" . (int)$p['id'] . ".png";
-                        $hasCover = file_exists("C:/xampp/htdocs/proyecto7mo/" . $coverPath);
+                        $hasCover = file_exists(__DIR__ . '/../' . $coverPath);
                         if ($hasCover): 
                         ?>
                             <img src="/proyecto7mo/<?= $coverPath ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">

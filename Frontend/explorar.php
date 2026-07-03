@@ -168,7 +168,7 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
                                 <div class="movie-flip-card-front relative flex flex-col justify-between">
                                     <?php 
                                     $coverPath = "public/covers/" . (int)$p['id'] . ".png";
-                                    $hasCover = file_exists("C:/xampp/htdocs/proyecto7mo/" . $coverPath);
+                                    $hasCover = file_exists(__DIR__ . '/../' . $coverPath);
                                     if ($hasCover): 
                                     ?>
                                         <img src="/proyecto7mo/<?= $coverPath ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">
@@ -240,7 +240,7 @@ $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('mo
                 genre: <?= json_encode($p['genre'] ?? 'General') ?>,
                 year: <?= (int)($p['year'] ?? 2024) ?>,
                 description: <?= json_encode($p['description'] ?? '') ?>,
-                hasCover: <?= file_exists("C:/xampp/htdocs/proyecto7mo/public/covers/" . (int)$p['id'] . ".png") ? 'true' : 'false' ?>,
+                hasCover: <?= file_exists(__DIR__ . '/../public/covers/' . (int)$p['id'] . '.png') ? 'true' : 'false' ?>,
                 reviews: [
                     <?php 
                     $reviews = api_get('movies/' . urlencode((int) $p['id']) . '/reviews') ?: [];

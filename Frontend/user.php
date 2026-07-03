@@ -14,6 +14,8 @@ $user_id = $_SESSION['user']['id'] ?? null;
 
 $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 $user_description = '';
+$userDescription = '';
+$userProfileImage = $_SESSION['user']['profile_image'] ?? '';
 
 $reputation = 0;
 $comments_count = 0;
@@ -23,14 +25,18 @@ if ($user_id) {
     try {
         $db = Database::getInstance()->getConnection();
 
-        $stmt = $db->prepare("SELECT name, email, description FROM users WHERE id = ? LIMIT 1");
+        $stmt = $db->prepare("SELECT name, email, description, profile_image FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$user_id]);
         $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($userRow) {
             $user_name = $userRow['name'] ?: $user_name;
             $user_email = $userRow['email'] ?: $user_email;
             $user_description = $userRow['description'] ?? '';
+            $userProfileImage = $userRow['profile_image'] ?? '';
             $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
+            $_SESSION['user']['name'] = $user_name;
+            $_SESSION['user']['email'] = $user_email;
+            $_SESSION['user']['profile_image'] = $userProfileImage;
         }
 
         // Cargar reputación real
@@ -51,18 +57,12 @@ if ($user_id) {
         $stmt->execute([$user_id]);
         $responses_count = (int) $stmt->fetchColumn();
 
-        $stmt = $db->prepare("SELECT description, profile_image FROM users WHERE id = ?");
-        $stmt->execute([$user_id]);
-        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-        $userDescription = $userData['description'] ?? '';
-        $userProfileImage = $userData['profile_image'] ?? '';
+        $userDescription = $user_description;
 
         $comments_count = $reviews_count + $responses_count;
         // Obtener reseñas del usuario
 $stmt = $db->prepare("
-SELECT reviews.comment, movies.title
+SELECT reviews.comment, movies.id AS movie_id, movies.title
     FROM reviews
     INNER JOIN movies ON reviews.movie_id = movies.id
     WHERE reviews.user_id = ?
@@ -147,15 +147,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         // Guardar nueva foto
         $file = $_FILES['photo'];
-        $fileName = time() . '_' . $file['name'];
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+        if (!in_array($extension, $allowedExtensions, true)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Formato de imagen no permitido'
+            ]);
+            exit;
+        }
+
+        $fileName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
 
         $uploadDir = __DIR__ . '/uploads/';
         $uploadPath = '/proyecto7mo/Frontend/uploads/' . $fileName;
 
-        move_uploaded_file(
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        if (!move_uploaded_file(
             $file['tmp_name'],
             $uploadDir . $fileName
-        );
+        )) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No se pudo guardar la imagen'
+            ]);
+            exit;
+        }
 
         $stmt = $db->prepare("
             UPDATE users
@@ -163,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             WHERE id = ?
         ");
         $stmt->execute([$uploadPath, $user_id]);
+        $_SESSION['user']['profile_image'] = $uploadPath;
 
         echo json_encode([
             'success' => true,
@@ -173,45 +195,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 }
 ?>
-<?php
-
-$user_reviews = [
-    [
-        "title" => "Interstellar",
-        "poster" => "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"
-    ],
-    [
-        "title" => "El caballero de la noche asciende",
-        "poster" => "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
-    ],
-    [
-        "title" => "Joker",
-        "poster" => "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg"
-    ],
-    [
-        "title" => "Avengers",
-        "poster" => "https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg"
-    ],
-    [
-        "title" => "Inception",
-        "poster" => "https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg"
-    ],
-    [
-        "title" => "The Batman",
-        "poster" => "https://image.tmdb.org/t/p/w500/5P8SmMzSNYikXpxil6BYzJ16611.jpg"
-    ]
-];
-?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Cuenta - NexoHub</title>
-    <!-- Importamos la fuente Outfit para un aspecto moderno y premium similar a Google Sans -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style/styles.css">
     <link rel="stylesheet" href="style/user.css">
 </head>
@@ -298,7 +287,7 @@ $user_reviews = [
                         <?php if(!empty($userProfileImage)): ?>
 
                             style="
-                                background-image:url('<?= $userProfileImage ?>');
+                                background-image:url('<?= htmlspecialchars($userProfileImage) ?>');
                                 background-size:cover;
                                 background-position:center;
                             "
@@ -327,7 +316,7 @@ $user_reviews = [
                 <?php if(!empty($userProfileImage)): ?>
 
                     style="
-                        background-image:url('<?= $userProfileImage ?>');
+                        background-image:url('<?= htmlspecialchars($userProfileImage) ?>');
                         background-size:cover;
                         background-position:center;
                     "
@@ -434,10 +423,18 @@ $user_reviews = [
 
                 <?php foreach ($user_reviews as $review): ?>
 
+                    <?php
+                        $coverPath = '/proyecto7mo/public/covers/' . (int) $review['movie_id'] . '.png';
+                        $coverFile = __DIR__ . '/../public/covers/' . (int) $review['movie_id'] . '.png';
+                        $poster = file_exists($coverFile)
+                            ? $coverPath
+                            : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
+                    ?>
+
                     <div class="movie-card">
 
                         <img 
-                            src="<?= htmlspecialchars($review['poster']) ?>" 
+                            src="<?= htmlspecialchars($poster) ?>" 
                             alt="<?= htmlspecialchars($review['title']) ?>"
                         >
 

@@ -3,6 +3,24 @@ $user = $_SESSION['user'] ?? null;
 $userPhoto = $user['profile_image'] ?? null;
 $userInitial = $user ? mb_strtoupper(mb_substr($user['name'], 0, 1, 'UTF-8')) : '';
 
+function profile_image_url(?string $path): ?string
+{
+    $path = trim((string) $path);
+    if ($path === '') {
+        return null;
+    }
+
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+
+    if ($path[0] === '/') {
+        return $path;
+    }
+
+    return '/proyecto7mo/' . ltrim($path, '/');
+}
+
 require_once __DIR__ . '/../Backend/models/Database.php';
 
 if ($user && isset($user['id'])) {
@@ -20,7 +38,9 @@ if ($user && isset($user['id'])) {
     $userData = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $userPhoto = $userData['profile_image'] ?? null;
+    $_SESSION['user']['profile_image'] = $userPhoto;
 }
+$userPhoto = profile_image_url($userPhoto);
 // Determine current page to highlight active navigation link
 $uri = $_SERVER['REQUEST_URI'] ?? '';
 $is_home = (strpos($uri, 'index.php') !== false || $uri === '/proyecto7mo/' || $uri === '/proyecto7mo' || substr($uri, -1) === '/');

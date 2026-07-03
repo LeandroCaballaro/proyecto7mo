@@ -100,17 +100,18 @@ input::placeholder {
 }
 
 .password-container input {
-    padding-right: 40px;
+    padding-right: 78px;
 }
 
 #togglePassword {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 56%;
     transform: translateY(-50%);
     cursor: pointer;
     color: #e94560;
-    font-size: 18px;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .btn{
@@ -130,19 +131,6 @@ input::placeholder {
   background-color: #a73548;
 }
 
-.social-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.google-button-wrapper {
-  display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
 .error-message {
     margin-top: 25px;
     padding: 3px;

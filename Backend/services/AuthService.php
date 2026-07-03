@@ -5,8 +5,6 @@ require_once __DIR__ . '/../models/UserModel.php';
 class AuthService
 {
     private UserModel $userModel;
-
-    // Duración del token (7 días por defecto)
     private int $tokenTtlDays = 7;
 
     public function __construct()
@@ -14,60 +12,52 @@ class AuthService
         $this->userModel = new UserModel();
     }
 
-    // -------------------------------------------------------------------------
-    // REGISTRO
-    // -------------------------------------------------------------------------
+    private array $allowedEmailDomains = [
+        'gmail.com',
+        'hotmail.com',
+        'live.com',
+        'outlook.com',
+        'yahoo.com',
+        'icloud.com',
+        'proton.me',
+    ];
 
-    /**
-     * Registra un nuevo usuario.
-     *
-     * @return array  En éxito: ['user' => [...], 'token' => '...']
-     *                En error:  ['error' => 'mensaje']
-     */
-    public function register(string $name, string $email, string $password): array
+    public function register(string $name, string $email, string $password, string $confirmPassword = ''): array
     {
-        // Validaciones básicas
-        $name     = trim($name);
-        $email    = trim($email);
+        $name = trim($name);
+        $email = trim($email);
 
         if ($name === '') {
             return ['error' => 'El nombre es obligatorio'];
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return ['error' => 'El email no es válido'];
+            return ['error' => 'El email no es valido'];
         }
 
-        if (strlen($password) < 6) {
-            return ['error' => 'La contraseña debe tener al menos 6 caracteres'];
+        if (!$this->hasAllowedEmailDomain($email)) {
+            return ['error' => 'Solo se permiten correos de dominios conocidos como Gmail, Hotmail, Live, Outlook, Yahoo, iCloud o Proton'];
         }
 
-        // Verificar que el email no esté en uso
+        if ($password !== $confirmPassword) {
+            return ['error' => 'Las contrasenas no coinciden'];
+        }
+
+        if (!$this->isStrongPassword($password)) {
+            return ['error' => 'La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero'];
+        }
+
         if ($this->userModel->findByEmail($email)) {
-            return ['error' => 'El email ya está registrado'];
+            return ['error' => 'El email ya esta registrado'];
         }
 
-        // Crear usuario
-        $hash   = password_hash($password, PASSWORD_BCRYPT);
+        $hash = password_hash($password, PASSWORD_BCRYPT);
         $userId = $this->userModel->create($name, $email, $hash);
-
-        // Crear reviewer asociado
         $this->userModel->ensureReviewer($userId, $name);
 
-        // Generar token y devolver sesión
         return $this->buildSession($userId, $name, $email);
     }
 
-    // -------------------------------------------------------------------------
-    // LOGIN
-    // -------------------------------------------------------------------------
-
-    /**
-     * Autentica un usuario con email y contraseña.
-     *
-     * @return array  En éxito: ['user' => [...], 'token' => '...']
-     *                En error:  ['error' => 'mensaje']
-     */
     public function login(string $email, string $password): array
     {
         $user = $this->userModel->findByEmail($email);
@@ -79,30 +69,16 @@ class AuthService
         return $this->buildSession((int) $user['id'], $user['name'], $user['email']);
     }
 
-    // -------------------------------------------------------------------------
-    // LOGOUT
-    // -------------------------------------------------------------------------
-
-    /**
-     * Invalida el token Bearer recibido.
-     */
     public function logout(?string $token): array
     {
         if (!$token) {
-            return ['error' => 'No hay sesión activa'];
+            return ['error' => 'No hay sesion activa'];
         }
 
         $this->userModel->deleteToken($token);
-        return ['message' => 'Sesión cerrada correctamente'];
+        return ['message' => 'Sesion cerrada correctamente'];
     }
 
-    // -------------------------------------------------------------------------
-    // USUARIO ACTUAL (ME)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Retorna los datos del usuario asociado al token.
-     */
     public function me(?string $token): ?array
     {
         if (!$token) {
@@ -112,54 +88,35 @@ class AuthService
         return $this->userModel->findByToken($token);
     }
 
-    /**
-     * Autentica o registra un usuario que inicia sesión mediante Google.
-     */
-    public function googleLogin(string $name, string $email): array
-    {
-        $email = trim($email);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return ['error' => 'El email no es válido'];
-        }
-
-        $user = $this->userModel->findByEmail($email);
-        if (!$user) {
-            // Registrar usuario nuevo con contraseña aleatoria
-            $randomPassword = bin2hex(random_bytes(16));
-            $hash = password_hash($randomPassword, PASSWORD_BCRYPT);
-            $userId = $this->userModel->create($name, $email, $hash);
-
-            // Asegurar reviewer asociado
-            $this->userModel->ensureReviewer($userId, $name);
-        } else {
-            $userId = (int) $user['id'];
-            $name = $user['name'];
-        }
-
-        return $this->buildSession($userId, $name, $email);
-    }
-    // -------------------------------------------------------------------------
-    // HELPER PRIVADO
-    // -------------------------------------------------------------------------
-
-    /**
-     * Genera un token seguro, lo persiste en BD y devuelve la respuesta de sesión.
-     */
     private function buildSession(int $userId, string $name, string $email): array
     {
-        $token     = bin2hex(random_bytes(32));                         // 64 hex chars
+        $token = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', strtotime("+{$this->tokenTtlDays} days"));
 
         $this->userModel->createToken($userId, $token, $expiresAt);
 
         return [
-            'user'       => [
-                'id'    => $userId,
-                'name'  => $name,
+            'user' => [
+                'id' => $userId,
+                'name' => $name,
                 'email' => $email,
             ],
-            'token'      => $token,
+            'token' => $token,
             'expires_at' => $expiresAt,
         ];
+    }
+
+    private function hasAllowedEmailDomain(string $email): bool
+    {
+        $domain = strtolower(substr(strrchr($email, '@') ?: '', 1));
+        return in_array($domain, $this->allowedEmailDomains, true);
+    }
+
+    private function isStrongPassword(string $password): bool
+    {
+        return strlen($password) >= 8
+            && preg_match('/[A-Z]/', $password)
+            && preg_match('/[a-z]/', $password)
+            && preg_match('/[0-9]/', $password);
     }
 }
