@@ -17,6 +17,7 @@ $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 $user_description = '';
 $userDescription = '';
 $userProfileImage = $_SESSION['user']['profile_image'] ?? '';
+$profile_is_public = 1;
 
 $reputation = 0;
 $comments_count = 0;
@@ -36,11 +37,23 @@ function ensure_favorites_table(PDO $db): void
     ");
 }
 
+function profile_upload_file_path(?string $profileImage): ?string
+{
+    if (!$profileImage || strpos($profileImage, '/proyecto7mo/Frontend/uploads/') !== 0) {
+        return null;
+    }
+
+    $fileName = basename($profileImage);
+    $path = __DIR__ . '/uploads/' . $fileName;
+
+    return is_file($path) ? $path : null;
+}
+
 if ($user_id) {
     try {
         $db = Database::getInstance()->getConnection();
 
-        $stmt = $db->prepare("SELECT name, username, email, description, profile_image FROM users WHERE id = ? LIMIT 1");
+        $stmt = $db->prepare("SELECT name, username, email, description, profile_image, is_public FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$user_id]);
         $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($userRow) {
@@ -49,11 +62,13 @@ if ($user_id) {
             $user_email = $userRow['email'] ?: $user_email;
             $user_description = $userRow['description'] ?? '';
             $userProfileImage = $userRow['profile_image'] ?? '';
+            $profile_is_public = isset($userRow['is_public']) ? (int) $userRow['is_public'] : 1;
             $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
             $_SESSION['user']['name'] = $user_name;
             $_SESSION['user']['username'] = $user_username;
             $_SESSION['user']['email'] = $user_email;
             $_SESSION['user']['profile_image'] = $userProfileImage;
+            $_SESSION['user']['is_public'] = $profile_is_public;
         }
 
         // Cargar reputación real
@@ -194,30 +209,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     // FOTO
     if ($_POST['action'] === 'update_photo') {
-
-    if(isset($_FILES['photo'])){
-
-        // Obtener foto actual
-        $stmt = $db->prepare("
-            SELECT profile_image
-            FROM users
-            WHERE id = ?
-        ");
-        $stmt->execute([$user_id]);
-
-        $currentImage = $stmt->fetchColumn();
-
-        // Borrar foto vieja
-        if ($currentImage) {
-
-            $oldFile = $_SERVER['DOCUMENT_ROOT'] . $currentImage;
-
-            if (file_exists($oldFile)) {
-                unlink($oldFile);
-            }
+        if (!isset($_FILES['photo'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No se selecciono ninguna imagen'
+            ]);
+            exit;
         }
 
-        // Guardar nueva foto
+        $stmt = $db->prepare("SELECT profile_image FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $currentImage = $stmt->fetchColumn();
+
         $file = $_FILES['photo'];
         $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -239,10 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             mkdir($uploadDir, 0755, true);
         }
 
-        if (!move_uploaded_file(
-            $file['tmp_name'],
-            $uploadDir . $fileName
-        )) {
+        if (!move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
             echo json_encode([
                 'success' => false,
                 'message' => 'No se pudo guardar la imagen'
@@ -250,11 +250,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        $stmt = $db->prepare("
-            UPDATE users
-            SET profile_image = ?
-            WHERE id = ?
-        ");
+        $oldFile = profile_upload_file_path($currentImage);
+        if ($oldFile) {
+            unlink($oldFile);
+        }
+
+        $stmt = $db->prepare("UPDATE users SET profile_image = ? WHERE id = ?");
         $stmt->execute([$uploadPath, $user_id]);
         $_SESSION['user']['profile_image'] = $uploadPath;
 
@@ -264,7 +265,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ]);
         exit;
     }
-}
+
+    if ($_POST['action'] === 'delete_photo') {
+        $stmt = $db->prepare("SELECT profile_image FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $currentImage = $stmt->fetchColumn();
+
+        $oldFile = profile_upload_file_path($currentImage);
+        if ($oldFile) {
+            unlink($oldFile);
+        }
+
+        $stmt = $db->prepare("UPDATE users SET profile_image = NULL WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $_SESSION['user']['profile_image'] = '';
+
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    if ($_POST['action'] === 'update_privacy') {
+        $isPublic = ($_POST['is_public'] ?? '1') === '1' ? 1 : 0;
+        $stmt = $db->prepare("UPDATE users SET is_public = ? WHERE id = ?");
+        $stmt->execute([$isPublic, $user_id]);
+        $_SESSION['user']['is_public'] = $isPublic;
+
+        echo json_encode([
+            'success' => true,
+            'is_public' => $isPublic
+        ]);
+        exit;
+    }
+
+    if ($_POST['action'] === 'delete_account') {
+        $stmt = $db->prepare("SELECT profile_image FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $currentImage = $stmt->fetchColumn();
+
+        try {
+            $db->beginTransaction();
+            $db->prepare("DELETE rr FROM review_responses rr INNER JOIN reviews r ON r.id = rr.review_id WHERE r.user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM review_responses WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM reviews WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM favorite_movies WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM genre_reputation WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM reviewers WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM api_tokens WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("UPDATE movies SET user_id = NULL WHERE user_id = ?")->execute([$user_id]);
+            $db->prepare("DELETE FROM users WHERE id = ?")->execute([$user_id]);
+            $db->commit();
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            echo json_encode([
+                'success' => false,
+                'message' => 'No se pudo eliminar la cuenta'
+            ]);
+            exit;
+        }
+
+        $oldFile = profile_upload_file_path($currentImage);
+        if ($oldFile) {
+            unlink($oldFile);
+        }
+
+        session_destroy();
+
+        echo json_encode([
+            'success' => true,
+            'redirect' => '/proyecto7mo/Frontend/login.php'
+        ]);
+        exit;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -400,6 +473,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <path d="M12 12m-3.2 0a3.2 3.2 0 1 1 6.4 0a3.2 3.2 0 1 1 -6.4 0M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5 5s-2.24 5-5 5z"/>
                             </svg>
                         </div>
+                    </button>
+                    <button class="btn-eliminar-foto<?= empty($userProfileImage) ? ' hidden' : '' ?>" id="btnEliminarFoto" type="button" title="Eliminar foto de perfil">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 3h6l1 2h5v2H3V5h5l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM6 9h2l1 11h6l1-11h2l-1.2 13H7.2L6 9z"/>
+                        </svg>
                     </button>
                     <input type="file" id="inputFotoPerfil" accept="image/*" style="display:none">
                 </div>
@@ -614,7 +692,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <span class="toggle-label" id="themeLabel">Oscuro</span>
                             </label>
                         </div>
-                        
+
+                        <div class="settings-row settings-card-long">
+                            <div class="settings-card-title">
+                                <span class="settings-label">Visibilidad del perfil</span>
+                                <p class="settings-note">Elige si otras personas pueden ver tu perfil.</p>
+                            </div>
+                            <div class="privacy-options" role="group" aria-label="Visibilidad del perfil">
+                                <button type="button" class="privacy-option<?= $profile_is_public ? ' active' : '' ?>" data-value="1">Público</button>
+                                <button type="button" class="privacy-option<?= !$profile_is_public ? ' active' : '' ?>" data-value="0">Privado</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-row settings-card-long danger-settings-row">
+                            <div class="settings-card-title">
+                                <span class="settings-label">Eliminar cuenta</span>
+                                <p class="settings-note">Borra tu perfil, reseñas, respuestas, favoritos y reputación.</p>
+                            </div>
+                            <button type="button" class="danger-action-btn" id="deleteAccountBtn">Eliminar cuenta</button>
+                        </div>
+                         
                     </div>
                 </div>
             </section>
@@ -671,12 +768,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const sections = document.querySelectorAll('.content-section');
             const inputDescripcion = document.getElementById('profileDescription');
             const btnCambiarFoto = document.getElementById('btnCambiarFoto');
+            const btnEliminarFoto = document.getElementById('btnEliminarFoto');
             const inputFotoPerfil = document.getElementById('inputFotoPerfil');
             const profileAvatar = document.getElementById('profileAvatar');
-            const profileInitial = document.getElementById('profileInitial');
+            let profileInitial = document.getElementById('profileInitial');
             const themeToggle = document.getElementById('themeToggle');
             const themeLabel = document.getElementById('themeLabel');
             const privacyOptions = document.querySelectorAll('.privacy-option');
+            const deleteAccountBtn = document.getElementById('deleteAccountBtn');
             const reviews = [];
             const editProfileBtn = document.getElementById('editProfileBtn');
             const editModal = document.getElementById('editModal');
@@ -688,6 +787,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const profileName = document.getElementById('profileName');
             const profileUsername = document.getElementById('profileUsername');
             const profileDescription = document.getElementById('profileDescription');
+            let userInitial = <?= json_encode($user_initial) ?>;
 
             const showSection = (sectionId) => {
                 sections.forEach(section => {
@@ -711,16 +811,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             const updatePrivacySelection = (privacyMode) => {
                 privacyOptions.forEach(option => {
-                    option.classList.toggle('active', option.dataset.value === privacyMode);
+                    option.classList.toggle('active', option.dataset.value === String(privacyMode));
                 });
-                localStorage.setItem('profile_privacy', privacyMode);
             };
 
-            const applySavedPrivacy = () => {
-                const savedPrivacy = localStorage.getItem('profile_privacy') || 'public';
-                if (savedPrivacy) {
-                    updatePrivacySelection(savedPrivacy);
+            const showAvatarInitial = () => {
+                profileAvatar.style.backgroundImage = '';
+                profileAvatar.style.backgroundSize = '';
+                profileAvatar.style.backgroundPosition = '';
+
+                if (!profileInitial) {
+                    profileInitial = document.createElement('span');
+                    profileInitial.id = 'profileInitial';
+                    profileInitial.textContent = userInitial;
+                    profileAvatar.appendChild(profileInitial);
                 }
+
+                profileInitial.style.opacity = '1';
             };
 
             const initSectionNavigation = () => {
@@ -809,6 +916,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 profileAvatar.style.backgroundImage = `url('${data.image}')`;
                 profileAvatar.style.backgroundSize = 'cover';
                 profileAvatar.style.backgroundPosition = 'center';
+                if (btnEliminarFoto) {
+                    btnEliminarFoto.classList.remove('hidden');
+                }
 
                 if (profileInitial) {
                     profileInitial.style.opacity = '0';
@@ -822,6 +932,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 }
 
+            if (btnEliminarFoto) {
+                btnEliminarFoto.addEventListener('click', () => {
+                    fetch('/proyecto7mo/Frontend/user.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            action: 'delete_photo'
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showAvatarInitial();
+                            btnEliminarFoto.classList.add('hidden');
+                        } else {
+                            alert(data.message || 'No se pudo eliminar la foto.');
+                        }
+                    });
+                });
+            }
+
             if (themeToggle) {
                 themeToggle.addEventListener('change', () => {
                     const selected = themeToggle.checked ? 'dark' : 'light';
@@ -834,13 +967,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (privacyOptions.length) {
                 privacyOptions.forEach(option => {
                     option.addEventListener('click', () => {
-                        updatePrivacySelection(option.dataset.value);
+                        const selectedPrivacy = option.dataset.value;
+                        fetch('/proyecto7mo/Frontend/user.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: new URLSearchParams({
+                                action: 'update_privacy',
+                                is_public: selectedPrivacy
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                updatePrivacySelection(data.is_public);
+                            } else {
+                                alert(data.message || 'No se pudo actualizar la privacidad.');
+                            }
+                        });
+                    });
+                });
+            }
+
+            if (deleteAccountBtn) {
+                deleteAccountBtn.addEventListener('click', () => {
+                    const confirmed = confirm('Esta accion eliminara tu cuenta, reseñas, respuestas, favoritos y reputacion. No se puede deshacer.');
+                    if (!confirmed) return;
+
+                    fetch('/proyecto7mo/Frontend/user.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            action: 'delete_account'
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.redirect || '/proyecto7mo/Frontend/login.php';
+                        } else {
+                            alert(data.message || 'No se pudo eliminar la cuenta.');
+                        }
                     });
                 });
             }
 
             applySavedTheme();
-            applySavedPrivacy();
+            updatePrivacySelection(<?= (int) $profile_is_public ?>);
 
 
 if(saveProfileChanges){
@@ -883,6 +1059,8 @@ if(saveProfileChanges){
             if(data.success){
                 profileName.textContent = data.name;
                 if (profileUsername) profileUsername.textContent = '@' + data.username;
+                userInitial = data.name.charAt(0).toUpperCase();
+                if (profileInitial) profileInitial.textContent = userInitial;
                 editModal.classList.remove('show');
             } else if (editProfileError) {
                 editProfileError.textContent = data.message || 'No se pudo actualizar el perfil.';

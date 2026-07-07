@@ -46,9 +46,25 @@ class Database
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
+            username VARCHAR(20) NULL UNIQUE,
             email VARCHAR(255) NOT NULL UNIQUE,
-            password_hash VARCHAR(255) NOT NULL
+            password_hash VARCHAR(255) NOT NULL,
+            description VARCHAR(100) NULL,
+            profile_image VARCHAR(255) NULL,
+            is_public TINYINT(1) NOT NULL DEFAULT 1
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $userColumns = [
+            'username' => "ALTER TABLE users ADD COLUMN username VARCHAR(20) NULL UNIQUE AFTER name",
+            'description' => "ALTER TABLE users ADD COLUMN description VARCHAR(100) NULL AFTER password_hash",
+            'profile_image' => "ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL AFTER description",
+            'is_public' => "ALTER TABLE users ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 1 AFTER profile_image",
+        ];
+        foreach ($userColumns as $column => $sql) {
+            $exists = $this->pdo->query("SHOW COLUMNS FROM users LIKE " . $this->pdo->quote($column))->fetch(PDO::FETCH_ASSOC);
+            if (!$exists) {
+                $this->pdo->exec($sql);
+            }
+        }
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS reviewers (
             id INT AUTO_INCREMENT PRIMARY KEY,

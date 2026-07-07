@@ -549,6 +549,38 @@ html[data-theme="light"] .settings-label {
     color: #e94560;
 }
 
+.btn-eliminar-foto {
+    position: absolute;
+    bottom: -2px;
+    left: -2px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #232338;
+    border: 3px solid var(--background);
+    color: var(--muted-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.25s ease;
+}
+
+.btn-eliminar-foto svg {
+    width: 15px;
+    height: 15px;
+}
+
+.btn-eliminar-foto:hover {
+    transform: scale(1.12);
+    color: #ff6b6b;
+}
+
+.btn-eliminar-foto.hidden {
+    display: none;
+}
+
 /* Nombre e info */
 .perfil-nombre {
     margin: 0 0 6px 0;
@@ -1022,6 +1054,34 @@ html[data-theme="light"] .settings-label {
         inset 0 2px 8px rgba(255,255,255,0.08);
 
     transform: scale(1.03);
+}
+
+.privacy-option {
+    font-family: inherit;
+}
+
+.danger-settings-row {
+    border-color: rgba(255, 107, 107, 0.22);
+}
+
+.danger-action-btn {
+    border: 1px solid rgba(255, 107, 107, 0.45);
+    border-radius: 999px;
+    background: rgba(255, 107, 107, 0.12);
+    color: #ff8a8a;
+    padding: 11px 18px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.danger-action-btn:hover {
+    background: rgba(255, 107, 107, 0.22);
+    color: #ffffff;
+    transform: translateY(-1px);
 }
 
 html[data-theme="light"] .privacy-option.active {
