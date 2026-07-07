@@ -469,6 +469,7 @@ if (!empty($_SESSION['user']['id'])) {
                 <div class="modal-poster-overlay">
                     <span id="modalMovieGenreYear" class="text-xs font-bold text-primary tracking-wide uppercase">GÉNERO • AÑO</span>
                     <h2 id="modalMovieTitle" class="text-2xl md:text-3xl font-extrabold text-foreground mt-1">Título de la Película</h2>
+                    <p id="modalMovieAuthor" class="modal-movie-author"></p>
                     <p id="modalMovieDesc" class="text-sm text-muted-foreground mt-3 line-clamp-4">Descripción de la película...</p>
                 </div>
             </div>
@@ -500,6 +501,7 @@ if (!empty($_SESSION['user']['id'])) {
             "<?= (int)$p['id'] ?>": {
                 id: <?= (int)$p['id'] ?>,
                 author_user_id: <?= isset($p['user_id']) ? (int) $p['user_id'] : 0 ?>,
+                author_name: <?= json_encode($p['author_name'] ?? '') ?>,
                 title: <?= json_encode($p['title']) ?>,
                 genre: <?= json_encode($p['genre'] ?? 'General') ?>,
                 year: <?= (int)($p['year'] ?? 2024) ?>,
@@ -597,6 +599,14 @@ if (!empty($_SESSION['user']['id'])) {
 
         document.getElementById('modalMovieGenreYear').innerText = `${movie.genre} • ${movie.year}`;
         document.getElementById('modalMovieTitle').innerText = movie.title;
+        const authorEl = document.getElementById('modalMovieAuthor');
+        if (movie.author_name) {
+            authorEl.innerText = `Autor: ${movie.author_name}`;
+            authorEl.style.display = 'block';
+        } else {
+            authorEl.innerText = '';
+            authorEl.style.display = 'none';
+        }
         document.getElementById('modalMovieDesc').innerText = movie.description || 'Sin descripción disponible.';
 
         updateFavoriteButton(movie);

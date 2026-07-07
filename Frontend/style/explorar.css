@@ -282,6 +282,14 @@
     height: 50%;
 }
 
+.modal-movie-author {
+    display: none;
+    margin-top: 0.35rem;
+    color: var(--foreground);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
 /* Right side (Reviews and actions) */
 .modal-right {
     width: 55%;
