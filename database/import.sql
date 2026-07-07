@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS movies (
   genre VARCHAR(100),
   featured TINYINT(1) DEFAULT 0,
   description TEXT,
-  year INT
+  year INT,
+  movie_author VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -71,10 +72,10 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO movies (title, genre, featured, description, year) VALUES
-('El Gran Viaje', 'Aventura', 1, 'Una épica aventura entre mundos.', 2021),
-('Amor en París', 'Romance', 0, 'Drama romántico en París.', 2019),
-('Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022);
+INSERT INTO movies (title, genre, featured, description, year, movie_author) VALUES
+('El Gran Viaje', 'Aventura', 1, 'Una épica aventura entre mundos.', 2021, 'NexoHub'),
+('Amor en París', 'Romance', 0, 'Drama romántico en París.', 2019, 'NexoHub'),
+('Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022, 'NexoHub');
 
 INSERT INTO reviewers (user_id, name, reputation) VALUES
 (NULL, 'Carlos Pérez', 120),

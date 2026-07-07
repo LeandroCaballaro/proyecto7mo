@@ -36,8 +36,13 @@ class Database
             featured TINYINT(1) DEFAULT 0,
             description TEXT,
             year INT,
+            movie_author VARCHAR(255) NULL,
             user_id INT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $movieAuthorColumn = $this->pdo->query("SHOW COLUMNS FROM movies LIKE 'movie_author'")->fetch(PDO::FETCH_ASSOC);
+        if (!$movieAuthorColumn) {
+            $this->pdo->exec("ALTER TABLE movies ADD COLUMN movie_author VARCHAR(255) NULL AFTER year");
+        }
         $movieUserColumn = $this->pdo->query("SHOW COLUMNS FROM movies LIKE 'user_id'")->fetch(PDO::FETCH_ASSOC);
         if (!$movieUserColumn) {
             $this->pdo->exec("ALTER TABLE movies ADD COLUMN user_id INT NULL");
@@ -123,10 +128,10 @@ class Database
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         if ((int) $this->pdo->query("SELECT COUNT(*) FROM movies")->fetchColumn() === 0) {
-            $s = $this->pdo->prepare("INSERT INTO movies (title, genre, featured, description, year) VALUES (?, ?, ?, ?, ?)");
-            $s->execute(['El Gran Viaje', 'Aventura', 1, 'Una épica aventura entre mundos.', 2021]);
-            $s->execute(['Amor en París', 'Romance', 0, 'Drama romántico en París.', 2019]);
-            $s->execute(['Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022]);
+            $s = $this->pdo->prepare("INSERT INTO movies (title, genre, featured, description, year, movie_author) VALUES (?, ?, ?, ?, ?, ?)");
+            $s->execute(['El Gran Viaje', 'Aventura', 1, 'Una épica aventura entre mundos.', 2021, 'NexoHub']);
+            $s->execute(['Amor en París', 'Romance', 0, 'Drama romántico en París.', 2019, 'NexoHub']);
+            $s->execute(['Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022, 'NexoHub']);
         }
 
         if ((int) $this->pdo->query("SELECT COUNT(*) FROM reviewers")->fetchColumn() === 0) {

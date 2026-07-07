@@ -86,14 +86,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'update_movie') {
             $movieId = (int) ($_POST['movie_id'] ?? 0);
             $title = trim($_POST['title'] ?? '');
+            $movieAuthor = trim($_POST['movie_author'] ?? '');
             $genre = trim($_POST['genre'] ?? '');
             $year = (int) ($_POST['year'] ?? 0);
             $description = trim($_POST['description'] ?? '');
             $featured = isset($_POST['featured']) ? 1 : 0;
 
-            if ($movieId && $title !== '' && in_array($genre, $genres, true) && $year >= 1800) {
-                $db->prepare("UPDATE movies SET title = ?, genre = ?, year = ?, description = ?, featured = ? WHERE id = ?")
-                    ->execute([$title, $genre, $year, $description, $featured, $movieId]);
+            if ($movieId && $title !== '' && $movieAuthor !== '' && in_array($genre, $genres, true) && $year >= 1800) {
+                $db->prepare("UPDATE movies SET title = ?, movie_author = ?, genre = ?, year = ?, description = ?, featured = ? WHERE id = ?")
+                    ->execute([$title, $movieAuthor, $genre, $year, $description, $featured, $movieId]);
                 $message = 'Pelicula actualizada.';
             }
         }
@@ -140,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $users = $db->query("SELECT id, name, username, email, role, is_public FROM users ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
-$movies = $db->query("SELECT id, title, genre, year, featured, description FROM movies ORDER BY title ASC")->fetchAll(PDO::FETCH_ASSOC);
+$movies = $db->query("SELECT id, title, movie_author, genre, year, featured, description FROM movies ORDER BY title ASC")->fetchAll(PDO::FETCH_ASSOC);
 $reviews = $db->query("
     SELECT r.id, r.comment, r.rating, u.name AS user_name, m.title AS movie_title
     FROM reviews r
@@ -209,6 +210,7 @@ $responses = $db->query("
                     <input type="hidden" name="action" value="update_movie">
                     <input type="hidden" name="movie_id" value="<?= (int) $movie['id'] ?>">
                     <label>Titulo <input name="title" value="<?= htmlspecialchars($movie['title']) ?>" required></label>
+                    <label>Autor <input name="movie_author" value="<?= htmlspecialchars($movie['movie_author'] ?? '') ?>" required></label>
                     <label>Genero
                         <select name="genre">
                             <?php foreach ($genres as $genre): ?>

@@ -37,6 +37,19 @@ function ensure_favorites_table(PDO $db): void
     ");
 }
 
+function movie_cover_path_user(int $movieId): ?string
+{
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+        $relative = '/proyecto7mo/public/covers/' . $movieId . '.' . $ext;
+        $file = __DIR__ . '/../public/covers/' . $movieId . '.' . $ext;
+        if (file_exists($file)) {
+            return $relative;
+        }
+    }
+
+    return null;
+}
+
 function profile_upload_file_path(?string $profileImage): ?string
 {
     if (!$profileImage || strpos($profileImage, '/proyecto7mo/Frontend/uploads/') !== 0) {
@@ -567,9 +580,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <?php foreach ($user_reviews as $review): ?>
 
                     <?php
-                        $coverPath = '/proyecto7mo/public/covers/' . (int) $review['movie_id'] . '.png';
-                        $coverFile = __DIR__ . '/../public/covers/' . (int) $review['movie_id'] . '.png';
-                        $poster = file_exists($coverFile)
+                        $coverPath = movie_cover_path_user((int) $review['movie_id']);
+                        $poster = $coverPath
                             ? $coverPath
                             : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
                     ?>
@@ -614,9 +626,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <?php if (!empty($user_favorites)): ?>
                 <?php foreach ($user_favorites as $favorite): ?>
                     <?php
-                        $coverPath = '/proyecto7mo/public/covers/' . (int) $favorite['movie_id'] . '.png';
-                        $coverFile = __DIR__ . '/../public/covers/' . (int) $favorite['movie_id'] . '.png';
-                        $poster = file_exists($coverFile)
+                        $coverPath = movie_cover_path_user((int) $favorite['movie_id']);
+                        $poster = $coverPath
                             ? $coverPath
                             : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
                     ?>

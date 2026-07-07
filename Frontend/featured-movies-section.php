@@ -1,4 +1,18 @@
-<?php $peliculas = api_get('movies/featured') ?: []; ?>
+<?php
+$peliculas = api_get('movies/featured') ?: [];
+
+function movieCoverRelativePathFeatured(int $movieId): ?string
+{
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+        $relative = 'public/covers/' . $movieId . '.' . $ext;
+        if (file_exists(__DIR__ . '/../' . $relative)) {
+            return $relative;
+        }
+    }
+
+    return null;
+}
+?>
 <section class="bg-card py-20">
     <div class="container mx-auto px-4">
         <div class="mb-12 text-center">
@@ -15,11 +29,11 @@
                 <div class="rounded-xl border border-border bg-background p-6 hover:shadow-lg transition-shadow">
                     <div class="aspect-[2/3] mb-4 rounded-lg bg-card flex items-center justify-center relative overflow-hidden">
                         <?php 
-                        $coverPath = "public/covers/" . (int)$p['id'] . ".png";
-                        $hasCover = file_exists(__DIR__ . '/../' . $coverPath);
+                        $coverPath = movieCoverRelativePathFeatured((int) $p['id']);
+                        $hasCover = $coverPath !== null;
                         if ($hasCover): 
                         ?>
-                            <img src="/proyecto7mo/<?= $coverPath ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">
+                            <img src="/proyecto7mo/<?= htmlspecialchars($coverPath) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover" loading="lazy" decoding="async">
                         <?php else: ?>
                             <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/30 flex items-center justify-center">
                                 <span class="text-4xl">🎥</span>

@@ -2,6 +2,7 @@
 session_start();
 define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
 require_once __DIR__ . '/../Backend/models/Database.php';
+require_once __DIR__ . '/../Backend/services/MovieService.php';
 
 function api_get($route, $extra = [])
 {
@@ -33,6 +34,110 @@ $msg = '';
 $active_movie_id = 0;
 $favoriteMovieIds = [];
 $allowedMovieGenres = ['Accion', 'Aventura', 'Animacion', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasia', 'Terror', 'Misterio', 'Romance', 'Ciencia ficcion', 'Thriller'];
+
+function mapMovieApiGenre(?string $genre): string
+{
+    $genre = trim((string) $genre);
+    $map = [
+        'Action' => 'Accion',
+        'Adventure' => 'Aventura',
+        'Animation' => 'Animacion',
+        'Comedy' => 'Comedia',
+        'Crime' => 'Crimen',
+        'Documentary' => 'Documental',
+        'Drama' => 'Drama',
+        'Fantasy' => 'Fantasia',
+        'Horror' => 'Terror',
+        'Mystery' => 'Misterio',
+        'Romance' => 'Romance',
+        'Sci-Fi' => 'Ciencia ficcion',
+        'Science Fiction' => 'Ciencia ficcion',
+        'Thriller' => 'Thriller',
+    ];
+
+    return $map[$genre] ?? 'Drama';
+}
+
+function movieApiJson(string $url): ?array
+{
+    $context = stream_context_create(['http' => [
+        'timeout' => 8,
+        'ignore_errors' => true,
+        'header' => "User-Agent: NexoHub/1.0\r\n",
+    ]]);
+    $raw = @file_get_contents($url, false, $context);
+    $data = $raw ? json_decode($raw, true) : null;
+
+    return is_array($data) ? $data : null;
+}
+
+function movieApiSearch(string $query): array
+{
+    $query = trim($query);
+    if ($query === '') {
+        return [];
+    }
+
+    $url = 'https://v3-cinemeta.strem.io/catalog/movie/top/search=' . rawurlencode($query) . '.json';
+    $data = movieApiJson($url);
+    $metas = is_array($data['metas'] ?? null) ? $data['metas'] : [];
+
+    return array_values(array_slice(array_map(function ($movie) {
+        $release = (string) ($movie['releaseInfo'] ?? '');
+        preg_match('/\d{4}/', $release, $yearMatch);
+
+        return [
+            'id' => $movie['id'] ?? '',
+            'title' => $movie['name'] ?? 'Sin titulo',
+            'year' => isset($yearMatch[0]) ? (int) $yearMatch[0] : null,
+            'poster' => $movie['poster'] ?? '',
+            'description' => $movie['description'] ?? '',
+        ];
+    }, $metas), 0, 10));
+}
+
+function movieApiMeta(string $id): ?array
+{
+    if (!preg_match('/^tt\d+$/', $id)) {
+        return null;
+    }
+
+    $url = 'https://v3-cinemeta.strem.io/meta/movie/' . rawurlencode($id) . '.json';
+    $data = movieApiJson($url);
+    $meta = is_array($data['meta'] ?? null) ? $data['meta'] : null;
+    if (!$meta) {
+        return null;
+    }
+
+    $release = (string) ($meta['releaseInfo'] ?? '');
+    preg_match('/\d{4}/', $release, $yearMatch);
+    $genres = is_array($meta['genres'] ?? null) ? $meta['genres'] : [];
+    $directorValue = $meta['director'] ?? [];
+    $directors = is_array($directorValue) ? $directorValue : [$directorValue];
+
+    return [
+        'id' => $meta['id'] ?? $id,
+        'title' => $meta['name'] ?? '',
+        'movie_author' => trim((string) ($directors[0] ?? '')),
+        'genre' => mapMovieApiGenre($genres[0] ?? ''),
+        'year' => isset($yearMatch[0]) ? (int) $yearMatch[0] : (int) date('Y'),
+        'description' => $meta['description'] ?? '',
+        'cover_image_url' => $meta['poster'] ?? '',
+    ];
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'movie_api_search') {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['results' => movieApiSearch($_GET['q'] ?? '')], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'movie_api_meta') {
+    header('Content-Type: application/json; charset=utf-8');
+    $meta = movieApiMeta($_GET['id'] ?? '');
+    echo json_encode($meta ? ['movie' => $meta] : ['error' => 'No se encontro la pelicula'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 function ensure_favorites_table(PDO $db): void
 {
@@ -172,11 +277,11 @@ function saveMovieCoverFromUrl(string $url, int $movieId): array
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_SESSION['token'])) {
+    $action = $_POST['action'] ?? 'submit_review';
+
+    if (empty($_SESSION['user'])) {
         $msg = 'Debes iniciar sesión para publicar películas o responder reseñas.';
     } else {
-        $action = $_POST['action'] ?? 'submit_review';
-
         if ($action === 'toggle_favorite') {
             header('Content-Type: application/json');
             $userId = (int) ($_SESSION['user']['id'] ?? 0);
@@ -227,12 +332,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 goto end_create_movie;
             }
 
-            $res = api_post('movies', [
-                'title' => $_POST['title'] ?? '',
-                'genre' => $movieGenre,
-                'year' => (int) ($_POST['year'] ?? 0),
-                'description' => $movieDescription,
-            ], $_SESSION['token']);
+            $service = new MovieService();
+            $res = $service->createMovie(
+                (int) ($_SESSION['user']['id'] ?? 0),
+                $_POST['title'] ?? '',
+                $movieGenre,
+                (int) ($_POST['year'] ?? 0),
+                $movieDescription,
+                $_POST['movie_author'] ?? ''
+            );
             if (isset($res['ok'], $res['movie_id'])) {
                 $movieId = (int) $res['movie_id'];
                 $coverResult = saveMovieCoverFromUpload($_FILES['cover_image_file'] ?? [], $movieId);
@@ -256,6 +364,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             end_create_movie:
         } elseif ($action === 'respond_review') {
+            if (empty($_SESSION['token'])) {
+                $msg = 'Debes iniciar sesión para responder reseñas.';
+                goto end_post_actions;
+            }
             $res = api_post('reviews/' . urlencode((int) ($_POST['review_id'] ?? 0)) . '/responses', [
                 'rating' => (int) ($_POST['rating'] ?? 0),
                 'comment' => $_POST['comment'] ?? '',
@@ -265,6 +377,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $active_movie_id = (int) ($_POST['movie_id'] ?? 0);
             }
         } else {
+            if (empty($_SESSION['token'])) {
+                $msg = 'Debes iniciar sesión para publicar reseñas.';
+                goto end_post_actions;
+            }
             $movie_id = (int) ($_POST['movie_id'] ?? 0);
             $res = api_post('reviews', [
                 'movie_id' => $movie_id,
@@ -277,10 +393,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    end_post_actions:
 }
 
 $peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('movies');
 $peliculas = is_array($peliculas) ? $peliculas : [];
+
+$seenMovies = [];
+$peliculas = array_values(array_filter($peliculas, function ($movie) use (&$seenMovies) {
+    $key = mb_strtolower(trim((string) ($movie['title'] ?? '')), 'UTF-8') . '|' . (int) ($movie['year'] ?? 0);
+    if (isset($seenMovies[$key])) {
+        return false;
+    }
+    $seenMovies[$key] = true;
+    return true;
+}));
 
 if ($q !== '') {
     $peliculas = array_values(array_filter($peliculas, function ($movie) use ($q) {
@@ -291,6 +418,39 @@ if ($q !== '') {
 usort($peliculas, function ($a, $b) {
     return strcasecmp($a['title'] ?? '', $b['title'] ?? '');
 });
+
+$moviesPerPage = 12;
+$page = max(1, (int) ($_GET['page'] ?? 1));
+$totalMovies = count($peliculas);
+$totalPages = max(1, (int) ceil($totalMovies / $moviesPerPage));
+$page = min($page, $totalPages);
+$visiblePeliculas = array_slice($peliculas, ($page - 1) * $moviesPerPage, $moviesPerPage);
+
+if ($active_movie_id > 0 && !in_array($active_movie_id, array_map(fn($movie) => (int) ($movie['id'] ?? 0), $visiblePeliculas), true)) {
+    foreach ($peliculas as $movie) {
+        if ((int) ($movie['id'] ?? 0) === $active_movie_id) {
+            array_unshift($visiblePeliculas, $movie);
+            break;
+        }
+    }
+}
+
+foreach ($visiblePeliculas as &$movie) {
+    $coverPath = movieCoverRelativePath((int) $movie['id']);
+    $movie['_cover_path'] = $coverPath;
+    $movie['_cover_url'] = $coverPath !== null ? '/proyecto7mo/' . $coverPath : '';
+    $movie['_has_cover'] = $coverPath !== null;
+}
+unset($movie);
+
+$nextPageUrl = '';
+if ($page < $totalPages) {
+    $nextPageUrl = '/proyecto7mo/Frontend/explorar.php?' . http_build_query(array_filter([
+        'genre' => $genre ?: null,
+        'q' => $q ?: null,
+        'page' => $page + 1,
+    ], fn($value) => $value !== null && $value !== ''));
+}
 
 if (!empty($_SESSION['user']['id'])) {
     try {
@@ -342,6 +502,11 @@ if (!empty($_SESSION['user']['id'])) {
 
             <!-- Filtros -->
             <div class="mb-8 flex flex-wrap gap-4">
+                <?php if (!empty($_SESSION['user'])): ?>
+                    <button type="button" class="add-movie-btn" onclick="openCreateMovieModal()">
+                        Agregar película
+                    </button>
+                <?php endif; ?>
                 <form method="get" action="/proyecto7mo/Frontend/explorar.php" class="explore-search-form">
                     <?php if ($genre): ?>
                         <input type="hidden" name="genre" value="<?= htmlspecialchars($genre) ?>">
@@ -355,7 +520,7 @@ if (!empty($_SESSION['user']['id'])) {
                 </form>
                 <select onchange="location = this.value;" class="rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
                     <option value="explorar.php">Todos los Géneros</option>
-                    <?php foreach (api_get('movies/genres') ?: [] as $g): ?>
+                    <?php foreach ($allowedMovieGenres as $g): ?>
                         <option value="explorar.php?genre=<?= urlencode($g) ?>" <?= $genre === $g ? 'selected' : '' ?>>
                             <?= htmlspecialchars($g) ?>
                         </option>
@@ -370,13 +535,38 @@ if (!empty($_SESSION['user']['id'])) {
             </div>
 
             <?php if (!empty($_SESSION['user'])): ?>
-                <div class="mb-8 rounded-xl border border-border bg-card p-6">
-                    <h2 class="text-xl font-semibold text-foreground mb-4">Publicar nueva película</h2>
-                    <form method="post" enctype="multipart/form-data" class="grid gap-4 lg:grid-cols-2" onsubmit="return validateCreateMovieForm(this)">
+                <div id="createMovieModalBackdrop" class="create-movie-modal-backdrop" onclick="closeCreateMovieModalOutside(event)">
+                    <div class="create-movie-modal" onclick="event.stopPropagation()">
+                        <div class="create-movie-modal-header">
+                            <h2>Publicar nueva película</h2>
+                            <button type="button" class="create-movie-close-btn" onclick="closeCreateMovieModal()" aria-label="Cerrar">&times;</button>
+                        </div>
+                    <form method="post" enctype="multipart/form-data" class="grid gap-4 lg:grid-cols-2 create-movie-form" onsubmit="return validateCreateMovieForm(this)">
                         <input type="hidden" name="action" value="create_movie">
+                        <div class="movie-picker-panel lg:col-span-2">
+                            <button type="button" class="movie-picker-toggle" onclick="toggleMoviePicker()">
+                                Seleccionar película
+                            </button>
+                            <div id="moviePickerBox" class="movie-picker-box">
+                                <div class="movie-picker-search-row">
+                                    <input id="movieApiSearchInput" type="search" class="movie-picker-search" placeholder="Buscar en IMDb">
+                                    <button type="button" class="movie-picker-search-btn" onclick="searchExternalMovies()">Buscar</button>
+                                </div>
+                                <div id="movieApiResults" class="movie-picker-results">
+                                    <button type="button" class="movie-picker-result movie-picker-new" onclick="useManualMovieEntry()">
+                                        <span>Nueva Película</span>
+                                        <small>Completar los datos manualmente</small>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <div>
                             <label class="text-xs font-semibold text-muted-foreground">Título</label>
                             <input type="text" name="title" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Nombre de la película">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-muted-foreground">Nombre del autor</label>
+                            <input type="text" name="movie_author" required maxlength="255" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Autor de la película">
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-muted-foreground">Género</label>
@@ -391,11 +581,11 @@ if (!empty($_SESSION['user']['id'])) {
                             <label class="text-xs font-semibold text-muted-foreground">Año</label>
                             <input type="number" name="year" min="1880" max="2100" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="<?= date('Y') ?>" value="<?= date('Y') ?>">
                         </div>
-                        <div>
+                        <div class="lg:col-start-2 lg:row-start-3">
                             <label class="text-xs font-semibold text-muted-foreground">Descripción</label>
                             <input type="text" name="description" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Un breve resumen">
                         </div>
-                        <div class="lg:col-span-2 w-full max-w-2xl mx-auto">
+                        <div class="lg:col-start-1 lg:row-start-3 w-full">
                             <label class="text-xs font-semibold text-muted-foreground">Portada (URL o seleccionar archivo)</label>
                             <div class="mt-2 flex items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-primary">
                                 <input type="url" name="cover_image_url" class="w-full border-0 bg-transparent px-2 py-1 text-foreground focus:outline-none js-cover-url" placeholder="https://ejemplo.com/portada.jpg" oninput="syncCoverRequired(this.form)">
@@ -406,12 +596,13 @@ if (!empty($_SESSION['user']['id'])) {
                             </div>
                             <p id="cover-file-label" class="mt-1 text-center text-xs text-muted-foreground">Ningún archivo seleccionado</p>
                         </div>
-                        <div class="lg:col-span-2">
+                        <div class="lg:col-span-2 flex justify-center">
                             <button type="submit" class="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                                 Publicar película
                             </button>
                         </div>
                     </form>
+                    </div>
                 </div>
             <?php endif; ?>
 
@@ -423,17 +614,17 @@ if (!empty($_SESSION['user']['id'])) {
                 </div>
             <?php else: ?>
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    <?php foreach ($peliculas as $p): ?>
+                    <?php foreach ($visiblePeliculas as $p): ?>
                         <div class="movie-card-container" onclick="openMovieModal(<?= (int)$p['id'] ?>)">
                             <div class="movie-flip-card">
                                 <!-- FRONT SIDE -->
                                 <div class="movie-flip-card-front relative flex flex-col justify-between">
                                     <?php 
-                                    $coverPath = movieCoverRelativePath((int) $p['id']);
+                                    $coverPath = $p['_cover_path'] ?? null;
                                     $hasCover = $coverPath !== null;
                                     if ($hasCover): 
                                     ?>
-                                        <img src="/proyecto7mo/<?= htmlspecialchars($coverPath) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">
+                                        <img src="<?= htmlspecialchars($p['_cover_url']) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                     <?php else: ?>
                                         <!-- Fallback gradient design -->
                                         <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/30 flex flex-col items-center justify-center p-4">
@@ -455,6 +646,11 @@ if (!empty($_SESSION['user']['id'])) {
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <?php if ($nextPageUrl): ?>
+                    <div class="mt-8 flex justify-center">
+                        <a href="<?= htmlspecialchars($nextPageUrl) ?>" class="load-more-movies-btn">Ver más películas</a>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </main>
@@ -497,34 +693,20 @@ if (!empty($_SESSION['user']['id'])) {
     <script>
     // Prepare all movie data on the client side
     const moviesData = {
-        <?php foreach ($peliculas as $p): ?>
+        <?php foreach ($visiblePeliculas as $p): ?>
             "<?= (int)$p['id'] ?>": {
                 id: <?= (int)$p['id'] ?>,
                 author_user_id: <?= isset($p['user_id']) ? (int) $p['user_id'] : 0 ?>,
                 author_name: <?= json_encode($p['author_name'] ?? '') ?>,
+                movie_author: <?= json_encode($p['movie_author'] ?? '') ?>,
                 title: <?= json_encode($p['title']) ?>,
                 genre: <?= json_encode($p['genre'] ?? 'General') ?>,
                 year: <?= (int)($p['year'] ?? 2024) ?>,
                 description: <?= json_encode($p['description'] ?? '') ?>,
-                coverUrl: <?= json_encode((($cp = movieCoverRelativePath((int) $p['id'])) !== null) ? ('/proyecto7mo/' . $cp) : '') ?>,
-                hasCover: <?= (($cp = movieCoverRelativePath((int) $p['id'])) !== null) ? 'true' : 'false' ?>,
+                coverUrl: <?= json_encode($p['_cover_url'] ?? '') ?>,
+                hasCover: <?= !empty($p['_has_cover']) ? 'true' : 'false' ?>,
                 favorite: <?= in_array((int) $p['id'], $favoriteMovieIds, true) ? 'true' : 'false' ?>,
-                reviews: [
-                    <?php 
-                    $reviews = api_get('movies/' . urlencode((int) $p['id']) . '/reviews') ?: [];
-                    foreach ($reviews as $rev): 
-                        $responses = api_get('reviews/' . urlencode((int) $rev['id']) . '/responses') ?: [];
-                    ?>
-                    {
-                        id: <?= (int)$rev['id'] ?>,
-                        user_id: <?= (int)$rev['user_id'] ?>,
-                        user_name: <?= json_encode($rev['user_name']) ?>,
-                        rating: <?= (int)$rev['rating'] ?>,
-                        comment: <?= json_encode($rev['comment'] ?: 'Sin comentario') ?>,
-                        responses: <?= json_encode($responses) ?>
-                    },
-                    <?php endforeach; ?>
-                ]
+                reviews: null
             },
         <?php endforeach; ?>
     };
@@ -575,10 +757,149 @@ if (!empty($_SESSION['user']['id'])) {
         label.textContent = fileInput?.files?.[0]?.name || 'Ningún archivo seleccionado';
     }
 
+    function getCreateMovieForm() {
+        return document.querySelector('form input[name="action"][value="create_movie"]')?.form || null;
+    }
+
+    function toggleMoviePicker() {
+        const box = document.getElementById('moviePickerBox');
+        if (!box) return;
+        box.classList.toggle('open');
+        const input = document.getElementById('movieApiSearchInput');
+        if (box.classList.contains('open') && input) input.focus();
+    }
+
+    function renderMovieApiResults(results, message = '') {
+        const container = document.getElementById('movieApiResults');
+        if (!container) return;
+
+        const newMovieButton = `
+            <button type="button" class="movie-picker-result movie-picker-new" onclick="useManualMovieEntry()">
+                <span>Nueva Película</span>
+                <small>Completar los datos manualmente</small>
+            </button>
+        `;
+
+        if (message) {
+            container.innerHTML = `<p class="movie-picker-message">${escapeHtml(message)}</p>${newMovieButton}`;
+            return;
+        }
+
+        container.innerHTML = results.map(movie => `
+            <button type="button" class="movie-picker-result" onclick="selectExternalMovie('${escapeHtml(movie.id)}')">
+                ${movie.poster ? `<img src="${escapeHtml(movie.poster)}" alt="">` : '<span class="movie-picker-poster-placeholder">🎬</span>'}
+                <span>
+                    <strong>${escapeHtml(movie.title)}</strong>
+                    <small>${movie.year || 'Sin año'}</small>
+                </span>
+            </button>
+        `).join('') + newMovieButton;
+    }
+
+    async function searchExternalMovies() {
+        const input = document.getElementById('movieApiSearchInput');
+        const query = input?.value.trim() || '';
+        if (query.length < 2) {
+            renderMovieApiResults([], 'Escribe al menos 2 caracteres para buscar.');
+            return;
+        }
+
+        renderMovieApiResults([], 'Buscando películas...');
+
+        try {
+            const response = await fetch(`/proyecto7mo/Frontend/explorar.php?action=movie_api_search&q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            const results = Array.isArray(data.results) ? data.results : [];
+            renderMovieApiResults(results, results.length ? '' : 'No encontramos resultados en la API.');
+        } catch (error) {
+            renderMovieApiResults([], 'No se pudo consultar la API. Puedes usar Nueva Película.');
+        }
+    }
+
+    async function selectExternalMovie(movieId) {
+        if (!movieId) return;
+        renderMovieApiResults([], 'Cargando datos de la película...');
+
+        try {
+            const response = await fetch(`/proyecto7mo/Frontend/explorar.php?action=movie_api_meta&id=${encodeURIComponent(movieId)}`);
+            const data = await response.json();
+            if (!data.movie) {
+                renderMovieApiResults([], 'No se pudieron cargar los detalles. Puedes usar Nueva Película.');
+                return;
+            }
+
+            fillCreateMovieForm(data.movie);
+            const box = document.getElementById('moviePickerBox');
+            if (box) box.classList.remove('open');
+        } catch (error) {
+            renderMovieApiResults([], 'No se pudieron cargar los detalles. Puedes usar Nueva Película.');
+        }
+    }
+
+    function fillCreateMovieForm(movie) {
+        const form = getCreateMovieForm();
+        if (!form) return;
+
+        form.elements.title.value = movie.title || '';
+        form.elements.movie_author.value = movie.movie_author || 'Desconocido';
+        form.elements.genre.value = movie.genre || '';
+        form.elements.year.value = movie.year || new Date().getFullYear();
+        form.elements.description.value = movie.description || '';
+        form.elements.cover_image_url.value = movie.cover_image_url || '';
+
+        syncCoverRequired(form);
+        updateCoverFileLabel(form.querySelector('.js-cover-file'));
+    }
+
+    function useManualMovieEntry() {
+        const form = getCreateMovieForm();
+        if (!form) return;
+
+        form.reset();
+        form.querySelector('input[name="action"]').value = 'create_movie';
+        form.elements.year.value = new Date().getFullYear();
+        updateCoverFileLabel(form.querySelector('.js-cover-file'));
+        syncCoverRequired(form);
+
+        const box = document.getElementById('moviePickerBox');
+        if (box) box.classList.remove('open');
+        form.elements.title.focus();
+    }
+
+    function openCreateMovieModal() {
+        const modal = document.getElementById('createMovieModalBackdrop');
+        if (!modal) return;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCreateMovieModal() {
+        const modal = document.getElementById('createMovieModalBackdrop');
+        if (!modal) return;
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function closeCreateMovieModalOutside(event) {
+        if (event.target === document.getElementById('createMovieModalBackdrop')) {
+            closeCreateMovieModal();
+        }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
-        const createMovieForm = document.querySelector('form input[name="action"][value="create_movie"]')?.form;
+        const createMovieForm = getCreateMovieForm();
         if (createMovieForm) {
             syncCoverRequired(createMovieForm);
+        }
+
+        const movieApiSearchInput = document.getElementById('movieApiSearchInput');
+        if (movieApiSearchInput) {
+            movieApiSearchInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    searchExternalMovies();
+                }
+            });
         }
     });
 
@@ -600,8 +921,9 @@ if (!empty($_SESSION['user']['id'])) {
         document.getElementById('modalMovieGenreYear').innerText = `${movie.genre} • ${movie.year}`;
         document.getElementById('modalMovieTitle').innerText = movie.title;
         const authorEl = document.getElementById('modalMovieAuthor');
-        if (movie.author_name) {
-            authorEl.innerText = `Autor: ${movie.author_name}`;
+        const visibleAuthorName = movie.movie_author || movie.author_name;
+        if (visibleAuthorName) {
+            authorEl.innerText = `Autor: ${visibleAuthorName}`;
             authorEl.style.display = 'block';
         } else {
             authorEl.innerText = '';
@@ -611,8 +933,10 @@ if (!empty($_SESSION['user']['id'])) {
 
         updateFavoriteButton(movie);
 
-        // Render reviews list on the right side
-        renderReviewsList(movie);
+        renderReviewsLoading();
+        loadMovieReviews(movie, movie.id === activeMovieId).then(() => {
+            renderReviewsList(movie);
+        });
 
         // Show Modal
         document.getElementById('movieModalBackdrop').classList.add('active');
@@ -676,6 +1000,7 @@ if (!empty($_SESSION['user']['id'])) {
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             closeMovieModal();
+            closeCreateMovieModal();
         }
     });
 
@@ -687,6 +1012,10 @@ if (!empty($_SESSION['user']['id'])) {
 
         container.classList.toggle('open');
         btn.classList.toggle('open');
+
+        if (container.classList.contains('open')) {
+            loadReviewResponses(reviewId);
+        }
     }
 
     // Render responses markup
@@ -703,6 +1032,126 @@ if (!empty($_SESSION['user']['id'])) {
                 <p class="text-muted-foreground text-xs leading-relaxed">${escapeHtml(resp.comment)}</p>
             </div>
         `).join('');
+    }
+
+    function reviewsCacheKey(movieId) {
+        return `nexohub_movie_reviews_${movieId}`;
+    }
+
+    function getCachedReviews(movieId) {
+        try {
+            const cached = JSON.parse(sessionStorage.getItem(reviewsCacheKey(movieId)) || 'null');
+            if (!cached || !Array.isArray(cached.reviews)) return null;
+            if (Date.now() - cached.savedAt > 5 * 60 * 1000) return null;
+            return cached.reviews;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function setCachedReviews(movieId, reviews) {
+        try {
+            sessionStorage.setItem(reviewsCacheKey(movieId), JSON.stringify({
+                savedAt: Date.now(),
+                reviews
+            }));
+        } catch (error) {
+            // Storage can be unavailable; the lazy load still works without cache.
+        }
+    }
+
+    function responsesCacheKey(reviewId) {
+        return `nexohub_review_responses_${reviewId}`;
+    }
+
+    function getCachedResponses(reviewId) {
+        try {
+            const cached = JSON.parse(sessionStorage.getItem(responsesCacheKey(reviewId)) || 'null');
+            if (!cached || !Array.isArray(cached.responses)) return null;
+            if (Date.now() - cached.savedAt > 5 * 60 * 1000) return null;
+            return cached.responses;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function setCachedResponses(reviewId, responses) {
+        try {
+            sessionStorage.setItem(responsesCacheKey(reviewId), JSON.stringify({
+                savedAt: Date.now(),
+                responses
+            }));
+        } catch (error) {
+            // Cache is optional.
+        }
+    }
+
+    async function loadReviewResponses(reviewId) {
+        const target = document.getElementById(`responses-list-${reviewId}`);
+        if (!target || target.dataset.loaded === '1') return;
+
+        const cached = getCachedResponses(reviewId);
+        if (cached) {
+            target.innerHTML = renderResponses(cached);
+            target.dataset.loaded = '1';
+            updateRepliesCount(reviewId, cached.length);
+            return;
+        }
+
+        target.innerHTML = `<p class="text-xs text-muted-foreground italic pl-4 opacity-75">Cargando respuestas...</p>`;
+
+        try {
+            const response = await fetch(`/proyecto7mo/Backend/public/api.php?route=${encodeURIComponent(`reviews/${reviewId}/responses`)}`);
+            const responses = await response.json();
+            const normalizedResponses = Array.isArray(responses) ? responses : [];
+            setCachedResponses(reviewId, normalizedResponses);
+            target.innerHTML = renderResponses(normalizedResponses);
+            target.dataset.loaded = '1';
+            updateRepliesCount(reviewId, normalizedResponses.length);
+        } catch (error) {
+            target.innerHTML = `<p class="text-xs text-muted-foreground italic pl-4 opacity-75">No se pudieron cargar las respuestas.</p>`;
+        }
+    }
+
+    function updateRepliesCount(reviewId, count) {
+        const countEl = document.getElementById(`replies-count-${reviewId}`);
+        if (countEl) countEl.textContent = count;
+    }
+
+    async function loadMovieReviews(movie, forceRefresh = false) {
+        if (!forceRefresh && Array.isArray(movie.reviews)) return movie.reviews;
+
+        const cached = forceRefresh ? null : getCachedReviews(movie.id);
+        if (cached) {
+            movie.reviews = cached;
+            return cached;
+        }
+
+        try {
+            const reviewsResponse = await fetch(`/proyecto7mo/Backend/public/api.php?route=${encodeURIComponent(`movies/${movie.id}/reviews`)}`);
+            const reviews = await reviewsResponse.json();
+            const normalizedReviews = Array.isArray(reviews) ? reviews.map(review => ({
+                ...review,
+                responses_count: Number(review.responses_count || 0)
+            })) : [];
+
+            movie.reviews = normalizedReviews;
+            setCachedReviews(movie.id, normalizedReviews);
+            return normalizedReviews;
+        } catch (error) {
+            movie.reviews = [];
+            return [];
+        }
+    }
+
+    function renderReviewsLoading() {
+        const container = document.getElementById('modalReviewsBody');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="text-center py-16 opacity-75">
+                <p class="text-sm text-muted-foreground">Cargando reseñas...</p>
+            </div>
+        `;
     }
 
     // Render response reply form markup
@@ -751,8 +1200,9 @@ if (!empty($_SESSION['user']['id'])) {
     function renderReviewsList(movie) {
         const container = document.getElementById('modalReviewsBody');
         let htmlContent = '';
+        const reviews = Array.isArray(movie.reviews) ? movie.reviews : [];
 
-        if (movie.reviews.length === 0) {
+        if (reviews.length === 0) {
             htmlContent += `
                 <div class="text-center py-16 opacity-75">
                     <span class="text-4xl">💬</span>
@@ -760,7 +1210,7 @@ if (!empty($_SESSION['user']['id'])) {
                 </div>
             `;
         } else {
-            movie.reviews.forEach(rev => {
+            reviews.forEach(rev => {
                 const isAuthorReview = Number(movie.author_user_id) > 0 && Number(rev.user_id) === Number(movie.author_user_id);
                 const authorBadge = isAuthorReview ? '<span class="review-author-badge">Autor</span>' : '';
                 htmlContent += `
@@ -780,14 +1230,16 @@ if (!empty($_SESSION['user']['id'])) {
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
                                 </svg>
-                                <span>Respuestas (${rev.responses.length})</span>
+                                <span>Respuestas (<span id="replies-count-${rev.id}">${Number(rev.responses_count || 0)}</span>)</span>
                             </div>
                         </div>
                         
                         <!-- Collapsible Replies Container -->
                         <div class="replies-container" id="replies-container-${rev.id}">
                             <div class="border-t border-border mt-3 pt-3 space-y-3">
-                                ${renderResponses(rev.responses)}
+                                <div id="responses-list-${rev.id}" data-loaded="0">
+                                    <p class="text-xs text-muted-foreground italic pl-4 opacity-75">Abre para cargar respuestas...</p>
+                                </div>
                                 ${renderReplyForm(rev, movie.id)}
                             </div>
                         </div>
@@ -799,7 +1251,7 @@ if (!empty($_SESSION['user']['id'])) {
         // Add Review Section at the bottom of the right column
         if (currentUser) {
             // Check if user already reviewed this movie
-            const alreadyReviewed = movie.reviews.some(rev => rev.user_id === currentUser.id);
+            const alreadyReviewed = reviews.some(rev => rev.user_id === currentUser.id);
 
             if (alreadyReviewed) {
                 htmlContent += `

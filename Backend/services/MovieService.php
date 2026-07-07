@@ -37,11 +37,12 @@ class MovieService
         return Movie::find($id);
     }
 
-    public function createMovie($userId, $title, $genre, $year, $description)
+    public function createMovie($userId, $title, $genre, $year, $description, $movieAuthor = '')
     {
         $title = trim($title);
         $genre = trim($genre);
         $description = trim($description);
+        $movieAuthor = trim((string) $movieAuthor);
         $year = (int) $year;
         $allowedGenres = ['Accion', 'Aventura', 'Animacion', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasia', 'Terror', 'Misterio', 'Romance', 'Ciencia ficcion', 'Thriller'];
 
@@ -54,14 +55,26 @@ class MovieService
         if ($description === '') {
             return ['error' => 'La descripción es obligatoria'];
         }
+        if ($movieAuthor === '') {
+            return ['error' => 'El autor de la película es obligatorio'];
+        }
+        if (mb_strlen($movieAuthor, 'UTF-8') > 255) {
+            return ['error' => 'El autor de la película no puede superar los 255 caracteres'];
+        }
         if ($year < 1800 || $year > (int) date('Y') + 1) {
             return ['error' => 'El año de la película no es válido'];
         }
 
+        $duplicate = $this->pdo->prepare("SELECT id FROM movies WHERE LOWER(title) = LOWER(?) AND year = ? LIMIT 1");
+        $duplicate->execute([$title, $year]);
+        if ($duplicate->fetch(PDO::FETCH_ASSOC)) {
+            return ['error' => 'Esta película ya existe'];
+        }
+
         $stmt = $this->pdo->prepare(
-            "INSERT INTO movies (title, genre, featured, description, year, user_id) VALUES (?, ?, 0, ?, ?, ?)"
+            "INSERT INTO movies (title, genre, featured, description, year, movie_author, user_id) VALUES (?, ?, 0, ?, ?, ?, ?)"
         );
-        $stmt->execute([$title, $genre, $description, $year, (int) $userId]);
+        $stmt->execute([$title, $genre, $description, $year, $movieAuthor, (int) $userId]);
 
         return ['ok' => true, 'movie_id' => (int) $this->pdo->lastInsertId()];
     }
@@ -144,8 +157,14 @@ class MovieService
     public function getReviewsForMovie($movieId)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT r.id, r.user_id, r.rating, r.comment, u.name AS user_name FROM reviews r
-             JOIN users u ON u.id = r.user_id WHERE r.movie_id = ? ORDER BY r.id DESC"
+            "SELECT r.id, r.user_id, r.rating, r.comment, u.name AS user_name,
+                    COUNT(rr.id) AS responses_count
+             FROM reviews r
+             JOIN users u ON u.id = r.user_id
+             LEFT JOIN review_responses rr ON rr.review_id = r.id
+             WHERE r.movie_id = ?
+             GROUP BY r.id, r.user_id, r.rating, r.comment, u.name
+             ORDER BY r.id DESC"
         );
         $stmt->execute([(int) $movieId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

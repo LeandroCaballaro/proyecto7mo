@@ -128,7 +128,8 @@ class MoviesController
             $d['title'] ?? '',
             $d['genre'] ?? '',
             $d['year'] ?? 0,
-            $d['description'] ?? ''
+            $d['description'] ?? '',
+            $d['movie_author'] ?? ''
         );
         if (isset($result['error'])) {
             $this->json($result, 400);
