@@ -474,11 +474,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             </svg>
                         </div>
                     </button>
-                    <button class="btn-eliminar-foto<?= empty($userProfileImage) ? ' hidden' : '' ?>" id="btnEliminarFoto" type="button" title="Eliminar foto de perfil">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 3h6l1 2h5v2H3V5h5l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM6 9h2l1 11h6l1-11h2l-1.2 13H7.2L6 9z"/>
-                        </svg>
-                    </button>
                     <input type="file" id="inputFotoPerfil" accept="image/*" style="display:none">
                 </div>
 
@@ -756,6 +751,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
 
 </div>
+        <div class="photo-modal" id="photoModal" aria-hidden="true">
+            <div class="photo-modal-content">
+                <button class="close-modal-btn" id="closePhotoModalBtn" type="button">&times;</button>
+                <h2>Foto de perfil</h2>
+
+                <button class="photo-upload-card" id="photoUploadCard" type="button">
+                    <span class="photo-upload-icon" aria-hidden="true">
+                        <svg viewBox="0 0 64 64" fill="none">
+                            <rect x="10" y="12" width="44" height="38" rx="6" stroke="currentColor" stroke-width="4"/>
+                            <path d="M18 43l11-12 8 8 5-6 8 10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="42" cy="24" r="4" fill="currentColor"/>
+                            <path d="M32 18v16M24 26h16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="photo-upload-title">Cargar imagen</span>
+                    <span class="photo-upload-note">Agregar imagen · PNG, JPG, GIF o WEBP</span>
+                </button>
+
+                <button class="photo-delete-current" id="btnEliminarFoto" type="button">
+                    Eliminar imagen actual
+                </button>
+            </div>
+        </div>
     <!-- Overlay móvil para cerrar el menú lateral -->
     <div class="sidebar-overlay-movil" id="sidebarOverlay"></div>
     
@@ -769,6 +787,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const inputDescripcion = document.getElementById('profileDescription');
             const btnCambiarFoto = document.getElementById('btnCambiarFoto');
             const btnEliminarFoto = document.getElementById('btnEliminarFoto');
+            const photoModal = document.getElementById('photoModal');
+            const photoUploadCard = document.getElementById('photoUploadCard');
+            const closePhotoModalBtn = document.getElementById('closePhotoModalBtn');
             const inputFotoPerfil = document.getElementById('inputFotoPerfil');
             const profileAvatar = document.getElementById('profileAvatar');
             let profileInitial = document.getElementById('profileInitial');
@@ -830,6 +851,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 profileInitial.style.opacity = '1';
             };
 
+            const openPhotoModal = () => {
+                if (!photoModal) return;
+                photoModal.classList.add('show');
+                photoModal.setAttribute('aria-hidden', 'false');
+            };
+
+            const closePhotoModal = () => {
+                if (!photoModal) return;
+                photoModal.classList.remove('show');
+                photoModal.setAttribute('aria-hidden', 'true');
+            };
+
             const initSectionNavigation = () => {
                 navItems.forEach(item => {
                     item.addEventListener('click', (e) => {
@@ -888,7 +921,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (btnCambiarFoto && inputFotoPerfil) {
 
     btnCambiarFoto.addEventListener('click', () => {
-        inputFotoPerfil.click();
+        openPhotoModal();
+    });
+
+    if (photoUploadCard) {
+        photoUploadCard.addEventListener('click', () => {
+            inputFotoPerfil.click();
+        });
+    }
+
+    if (closePhotoModalBtn) {
+        closePhotoModalBtn.addEventListener('click', closePhotoModal);
+    }
+
+    if (photoModal) {
+        photoModal.addEventListener('click', (event) => {
+            if (event.target === photoModal) {
+                closePhotoModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closePhotoModal();
+        }
     });
 
     inputFotoPerfil.addEventListener('change', () => {
@@ -916,13 +973,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 profileAvatar.style.backgroundImage = `url('${data.image}')`;
                 profileAvatar.style.backgroundSize = 'cover';
                 profileAvatar.style.backgroundPosition = 'center';
-                if (btnEliminarFoto) {
-                    btnEliminarFoto.classList.remove('hidden');
-                }
 
                 if (profileInitial) {
                     profileInitial.style.opacity = '0';
                 }
+
+                inputFotoPerfil.value = '';
+                closePhotoModal();
 
             }
 
@@ -947,7 +1004,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     .then(data => {
                         if (data.success) {
                             showAvatarInitial();
-                            btnEliminarFoto.classList.add('hidden');
+                            closePhotoModal();
                         } else {
                             alert(data.message || 'No se pudo eliminar la foto.');
                         }

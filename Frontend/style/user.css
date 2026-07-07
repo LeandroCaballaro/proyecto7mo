@@ -549,38 +549,6 @@ html[data-theme="light"] .settings-label {
     color: #e94560;
 }
 
-.btn-eliminar-foto {
-    position: absolute;
-    bottom: -2px;
-    left: -2px;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: #232338;
-    border: 3px solid var(--background);
-    color: var(--muted-foreground);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    transition: all 0.25s ease;
-}
-
-.btn-eliminar-foto svg {
-    width: 15px;
-    height: 15px;
-}
-
-.btn-eliminar-foto:hover {
-    transform: scale(1.12);
-    color: #ff6b6b;
-}
-
-.btn-eliminar-foto.hidden {
-    display: none;
-}
-
 /* Nombre e info */
 .perfil-nombre {
     margin: 0 0 6px 0;
@@ -1247,6 +1215,107 @@ html[data-theme="light"] .privacy-option.active {
     font-weight:700;
 
     color:white;
+}
+
+.photo-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.68);
+    backdrop-filter: blur(6px);
+}
+
+.photo-modal.show {
+    display: flex;
+}
+
+.photo-modal-content {
+    position: relative;
+    width: min(420px, 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, rgba(25,25,45,0.98), rgba(17,17,35,0.98));
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 40px rgba(233,69,96,0.08);
+    padding: 34px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.photo-modal-content h2 {
+    margin: 0;
+    text-align: center;
+    color: white;
+    font-size: 1.55rem;
+}
+
+.photo-upload-card {
+    min-height: 220px;
+    border: 1px dashed rgba(255,255,255,0.24);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.045);
+    color: var(--foreground);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.22s ease;
+}
+
+.photo-upload-card:hover {
+    border-color: rgba(233,69,96,0.7);
+    background: rgba(233,69,96,0.1);
+    transform: translateY(-1px);
+}
+
+.photo-upload-icon {
+    width: 86px;
+    height: 86px;
+    color: var(--primary);
+}
+
+.photo-upload-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.photo-upload-title {
+    color: white;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.photo-upload-note {
+    color: var(--muted-foreground);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.photo-delete-current {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.05);
+    color: var(--muted-foreground);
+    padding: 13px 16px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.photo-delete-current:hover {
+    border-color: rgba(255,107,107,0.6);
+    background: rgba(255,107,107,0.18);
+    color: #ff8a8a;
 }
 
 #editName,
