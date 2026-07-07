@@ -62,9 +62,14 @@ class Database
             user_id INT NOT NULL,
             movie_id INT NOT NULL,
             rating TINYINT NOT NULL,
+            image_url VARCHAR(255) NULL,
             comment TEXT,
             UNIQUE KEY uk_user_movie (user_id, movie_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $reviewImageColumn = $this->pdo->query("SHOW COLUMNS FROM reviews LIKE 'image_url'")->fetch(PDO::FETCH_ASSOC);
+        if (!$reviewImageColumn) {
+            $this->pdo->exec("ALTER TABLE reviews ADD COLUMN image_url VARCHAR(255) NULL AFTER rating");
+        }
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS review_responses (
             id INT AUTO_INCREMENT PRIMARY KEY,

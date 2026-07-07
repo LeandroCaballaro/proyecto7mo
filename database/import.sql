@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   user_id INT NOT NULL,
   movie_id INT NOT NULL,
   rating TINYINT NOT NULL,
+  image_url VARCHAR(255) NULL,
   comment TEXT,
   UNIQUE KEY uk_user_movie (user_id, movie_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

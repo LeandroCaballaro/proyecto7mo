@@ -32,6 +32,7 @@ $q = trim($_GET['q'] ?? '');
 $msg = '';
 $active_movie_id = 0;
 $favoriteMovieIds = [];
+$allowedMovieGenres = ['Accion', 'Aventura', 'Animacion', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasia', 'Terror', 'Misterio', 'Romance', 'Ciencia ficcion', 'Thriller'];
 
 function ensure_favorites_table(PDO $db): void
 {
@@ -44,6 +45,130 @@ function ensure_favorites_table(PDO $db): void
             UNIQUE KEY uk_user_movie_favorite (user_id, movie_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
+}
+
+function movieCoverRelativePath(int $movieId): ?string
+{
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+        $relative = 'public/covers/' . $movieId . '.' . $ext;
+        if (file_exists(__DIR__ . '/../' . $relative)) {
+            return $relative;
+        }
+    }
+
+    return null;
+}
+
+function clearMovieCoverFiles(int $movieId): void
+{
+    $files = glob(__DIR__ . '/../public/covers/' . $movieId . '.*');
+    if (!is_array($files)) {
+        return;
+    }
+
+    foreach ($files as $file) {
+        if (is_file($file)) {
+            @unlink($file);
+        }
+    }
+}
+
+function saveMovieCoverFromUpload(array $file, int $movieId): array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => true, 'saved' => false];
+    }
+
+    if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'No se pudo subir la portada del archivo'];
+    }
+
+
+    $tmpPath = $file['tmp_name'] ?? '';
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return ['ok' => false, 'error' => 'Archivo de portada inválido'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = $finfo ? finfo_file($finfo, $tmpPath) : '';
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
+
+    if (!isset($allowed[$mime])) {
+        return ['ok' => false, 'error' => 'Formato de portada no permitido (JPG, PNG, WEBP o GIF)'];
+    }
+
+    $coverDir = __DIR__ . '/../public/covers';
+    if (!is_dir($coverDir) && !mkdir($coverDir, 0755, true)) {
+        return ['ok' => false, 'error' => 'No se pudo preparar la carpeta de portadas'];
+    }
+
+    clearMovieCoverFiles($movieId);
+    $destination = $coverDir . '/' . $movieId . '.' . $allowed[$mime];
+
+    if (!move_uploaded_file($tmpPath, $destination)) {
+        return ['ok' => false, 'error' => 'No se pudo guardar la portada subida'];
+    }
+
+    return ['ok' => true, 'saved' => true];
+}
+
+function saveMovieCoverFromUrl(string $url, int $movieId): array
+{
+    $url = trim($url);
+    if ($url === '') {
+        return ['ok' => true, 'saved' => false];
+    }
+
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        return ['ok' => false, 'error' => 'La URL de la portada no es válida'];
+    }
+
+    $context = stream_context_create(['http' => ['timeout' => 10, 'ignore_errors' => true]]);
+    $content = @file_get_contents($url, false, $context);
+    if ($content === false) {
+        return ['ok' => false, 'error' => 'No se pudo descargar la portada desde la URL'];
+    }
+
+    $mime = '';
+    foreach ($http_response_header ?? [] as $header) {
+        if (stripos($header, 'Content-Type:') === 0) {
+            $mime = trim(strtolower(explode(';', substr($header, 13))[0]));
+            break;
+        }
+    }
+
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
+
+    if (!isset($allowed[$mime])) {
+        return ['ok' => false, 'error' => 'La URL no apunta a una imagen válida (JPG, PNG, WEBP o GIF)'];
+    }
+
+    $coverDir = __DIR__ . '/../public/covers';
+    if (!is_dir($coverDir) && !mkdir($coverDir, 0755, true)) {
+        return ['ok' => false, 'error' => 'No se pudo preparar la carpeta de portadas'];
+    }
+
+    clearMovieCoverFiles($movieId);
+    $destination = $coverDir . '/' . $movieId . '.' . $allowed[$mime];
+    if (file_put_contents($destination, $content) === false) {
+        return ['ok' => false, 'error' => 'No se pudo guardar la portada descargada'];
+    }
+
+    return ['ok' => true, 'saved' => true];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -82,13 +207,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'create_movie') {
+            $movieGenre = trim((string) ($_POST['genre'] ?? ''));
+            $movieDescription = trim((string) ($_POST['description'] ?? ''));
+            $coverUrlInput = trim((string) ($_POST['cover_image_url'] ?? ''));
+            $hasCoverFile = (($_FILES['cover_image_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE);
+
+            if (!in_array($movieGenre, $allowedMovieGenres, true)) {
+                $msg = 'Debes seleccionar un género válido.';
+                goto end_create_movie;
+            }
+
+            if ($movieDescription === '') {
+                $msg = 'La descripción es obligatoria.';
+                goto end_create_movie;
+            }
+
+            if ($coverUrlInput === '' && !$hasCoverFile) {
+                $msg = 'Debes completar la URL de imagen o seleccionar un archivo de portada.';
+                goto end_create_movie;
+            }
+
             $res = api_post('movies', [
                 'title' => $_POST['title'] ?? '',
-                'genre' => $_POST['genre'] ?? '',
+                'genre' => $movieGenre,
                 'year' => (int) ($_POST['year'] ?? 0),
-                'description' => $_POST['description'] ?? '',
+                'description' => $movieDescription,
             ], $_SESSION['token']);
-            $msg = isset($res['ok']) ? 'Película publicada correctamente.' : ($res['error'] ?? 'Error al publicar película');
+            if (isset($res['ok'], $res['movie_id'])) {
+                $movieId = (int) $res['movie_id'];
+                $coverResult = saveMovieCoverFromUpload($_FILES['cover_image_file'] ?? [], $movieId);
+
+                if (empty($coverResult['ok'])) {
+                    $msg = 'Película publicada, pero la portada no se pudo guardar: ' . ($coverResult['error'] ?? 'error desconocido');
+                } elseif (!empty($coverResult['saved'])) {
+                    $msg = 'Película publicada correctamente con portada.';
+                } else {
+                    $coverUrlResult = saveMovieCoverFromUrl($coverUrlInput, $movieId);
+                    if (empty($coverUrlResult['ok'])) {
+                        $msg = 'Película publicada, pero la portada por URL falló: ' . ($coverUrlResult['error'] ?? 'error desconocido');
+                    } elseif (!empty($coverUrlResult['saved'])) {
+                        $msg = 'Película publicada correctamente con portada.';
+                    } else {
+                        $msg = 'Película publicada correctamente.';
+                    }
+                }
+            } else {
+                $msg = $res['error'] ?? 'Error al publicar película';
+            }
+            end_create_movie:
         } elseif ($action === 'respond_review') {
             $res = api_post('reviews/' . urlencode((int) ($_POST['review_id'] ?? 0)) . '/responses', [
                 'rating' => (int) ($_POST['rating'] ?? 0),
@@ -206,7 +372,7 @@ if (!empty($_SESSION['user']['id'])) {
             <?php if (!empty($_SESSION['user'])): ?>
                 <div class="mb-8 rounded-xl border border-border bg-card p-6">
                     <h2 class="text-xl font-semibold text-foreground mb-4">Publicar nueva película</h2>
-                    <form method="post" class="grid gap-4 lg:grid-cols-2">
+                    <form method="post" enctype="multipart/form-data" class="grid gap-4 lg:grid-cols-2" onsubmit="return validateCreateMovieForm(this)">
                         <input type="hidden" name="action" value="create_movie">
                         <div>
                             <label class="text-xs font-semibold text-muted-foreground">Título</label>
@@ -214,7 +380,12 @@ if (!empty($_SESSION['user']['id'])) {
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-muted-foreground">Género</label>
-                            <input type="text" name="genre" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Ej. Acción, Drama">
+                            <select name="genre" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                                <option value="">Selecciona un género</option>
+                                <?php foreach ($allowedMovieGenres as $validGenre): ?>
+                                    <option value="<?= htmlspecialchars($validGenre) ?>"><?= htmlspecialchars($validGenre) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-muted-foreground">Año</label>
@@ -222,7 +393,18 @@ if (!empty($_SESSION['user']['id'])) {
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-muted-foreground">Descripción</label>
-                            <input type="text" name="description" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Un breve resumen">
+                            <input type="text" name="description" required class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Un breve resumen">
+                        </div>
+                        <div class="lg:col-span-2 w-full max-w-2xl mx-auto">
+                            <label class="text-xs font-semibold text-muted-foreground">Portada (URL o seleccionar archivo)</label>
+                            <div class="mt-2 flex items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5 focus-within:ring-1 focus-within:ring-primary">
+                                <input type="url" name="cover_image_url" class="w-full border-0 bg-transparent px-2 py-1 text-foreground focus:outline-none js-cover-url" placeholder="https://ejemplo.com/portada.jpg" oninput="syncCoverRequired(this.form)">
+                                <input type="file" id="cover_image_file" name="cover_image_file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden js-cover-file" onchange="syncCoverRequired(this.form); updateCoverFileLabel(this)">
+                                <label for="cover_image_file" class="shrink-0 cursor-pointer rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary/10 transition-colors">
+                                    Seleccionar archivo
+                                </label>
+                            </div>
+                            <p id="cover-file-label" class="mt-1 text-center text-xs text-muted-foreground">Ningún archivo seleccionado</p>
                         </div>
                         <div class="lg:col-span-2">
                             <button type="submit" class="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
@@ -247,11 +429,11 @@ if (!empty($_SESSION['user']['id'])) {
                                 <!-- FRONT SIDE -->
                                 <div class="movie-flip-card-front relative flex flex-col justify-between">
                                     <?php 
-                                    $coverPath = "public/covers/" . (int)$p['id'] . ".png";
-                                    $hasCover = file_exists(__DIR__ . '/../' . $coverPath);
+                                    $coverPath = movieCoverRelativePath((int) $p['id']);
+                                    $hasCover = $coverPath !== null;
                                     if ($hasCover): 
                                     ?>
-                                        <img src="/proyecto7mo/<?= $coverPath ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">
+                                        <img src="/proyecto7mo/<?= htmlspecialchars($coverPath) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover">
                                     <?php else: ?>
                                         <!-- Fallback gradient design -->
                                         <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/30 flex flex-col items-center justify-center p-4">
@@ -321,7 +503,8 @@ if (!empty($_SESSION['user']['id'])) {
                 genre: <?= json_encode($p['genre'] ?? 'General') ?>,
                 year: <?= (int)($p['year'] ?? 2024) ?>,
                 description: <?= json_encode($p['description'] ?? '') ?>,
-                hasCover: <?= file_exists(__DIR__ . '/../public/covers/' . (int)$p['id'] . '.png') ? 'true' : 'false' ?>,
+                coverUrl: <?= json_encode((($cp = movieCoverRelativePath((int) $p['id'])) !== null) ? ('/proyecto7mo/' . $cp) : '') ?>,
+                hasCover: <?= (($cp = movieCoverRelativePath((int) $p['id'])) !== null) ? 'true' : 'false' ?>,
                 favorite: <?= in_array((int) $p['id'], $favoriteMovieIds, true) ? 'true' : 'false' ?>,
                 reviews: [
                     <?php 
@@ -357,6 +540,45 @@ if (!empty($_SESSION['user']['id'])) {
             .replace(/'/g, "&#039;");
     }
 
+    function validateCreateMovieForm(form) {
+        if (!form) return false;
+        syncCoverRequired(form);
+        return form.checkValidity();
+    }
+
+    function syncCoverRequired(form) {
+        if (!form) return;
+
+        const urlInput = form.querySelector('.js-cover-url');
+        const fileInput = form.querySelector('.js-cover-file');
+        if (!urlInput || !fileInput) return;
+
+        const hasUrl = urlInput.value.trim() !== '';
+        const hasFile = (fileInput.files?.length || 0) > 0;
+        const needsOne = !hasUrl && !hasFile;
+
+        // Trigger native required message instead of custom alert.
+        urlInput.required = needsOne;
+        fileInput.required = false;
+
+        const message = needsOne ? 'Completa la URL de imagen o selecciona un archivo.' : '';
+        urlInput.setCustomValidity(message);
+        fileInput.setCustomValidity('');
+    }
+
+    function updateCoverFileLabel(fileInput) {
+        const label = document.getElementById('cover-file-label');
+        if (!label) return;
+        label.textContent = fileInput?.files?.[0]?.name || 'Ningún archivo seleccionado';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const createMovieForm = document.querySelector('form input[name="action"][value="create_movie"]')?.form;
+        if (createMovieForm) {
+            syncCoverRequired(createMovieForm);
+        }
+    });
+
     // Modal Control Functions
     function openMovieModal(movieId) {
         const movie = moviesData[movieId];
@@ -365,7 +587,7 @@ if (!empty($_SESSION['user']['id'])) {
         // Set left side details
         const posterImg = document.getElementById('modalMoviePoster');
         if (movie.hasCover) {
-            posterImg.src = `/proyecto7mo/public/covers/${movie.id}.png`;
+            posterImg.src = movie.coverUrl;
             posterImg.style.display = 'block';
         } else {
             // Simulated generic background if no poster image

@@ -43,9 +43,16 @@ class MovieService
         $genre = trim($genre);
         $description = trim($description);
         $year = (int) $year;
+        $allowedGenres = ['Accion', 'Aventura', 'Animacion', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasia', 'Terror', 'Misterio', 'Romance', 'Ciencia ficcion', 'Thriller'];
 
         if ($title === '') {
             return ['error' => 'El título es obligatorio'];
+        }
+        if (!in_array($genre, $allowedGenres, true)) {
+            return ['error' => 'El género no es válido'];
+        }
+        if ($description === '') {
+            return ['error' => 'La descripción es obligatoria'];
         }
         if ($year < 1800 || $year > (int) date('Y') + 1) {
             return ['error' => 'El año de la película no es válido'];
@@ -196,6 +203,7 @@ class MovieService
     public function addReview($userId, $movieId, $rating, $comment)
     {
         $rating = (int) $rating;
+
         if ($rating < 1 || $rating > 5) {
             return ['error' => 'La calificación debe ser de 1 a 5'];
         }

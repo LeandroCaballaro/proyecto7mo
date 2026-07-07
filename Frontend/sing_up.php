@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
-    $allowedDomains = ['gmail.com', 'hotmail.com', 'live.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'proton.me'];
+    $allowedDomains = ['gmail.com', 'hotmail.com', 'live.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'proton.me','abc.gob.ar','edu.ar'];
     $emailDomain = strtolower(substr(strrchr($email, '@') ?: '', 1));
 
     if ($name === '' || $username === '' || $email === '' || $password === '' || $confirmPassword === '') {
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!preg_match('/^[A-Za-z0-9]{1,20}$/', $username)) {
         $authError = 'El nombre de usuario solo puede tener letras y numeros, hasta 20 caracteres';
     } elseif (!in_array($emailDomain, $allowedDomains, true)) {
-        $authError = 'Use un correo de Gmail, Hotmail, Live, Outlook, Yahoo, iCloud o Proton';
+        $authError = 'Use un correo de Gmail, Hotmail, Live, Outlook, Yahoo, iCloud, Proton, abc.gob.ar o edu.ar';
     } elseif ($password !== $confirmPassword) {
         $authError = 'Las contrasenas no coinciden';
     } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password)) {

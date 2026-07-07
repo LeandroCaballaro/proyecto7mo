@@ -614,16 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <span class="toggle-label" id="themeLabel">Oscuro</span>
                             </label>
                         </div>
-                        <div class="settings-row settings-card-long">
-                            <div class="settings-card-title">
-                                <span class="settings-label">Privacidad</span>
-                                <p class="settings-note">Elige quién puede ver tu perfil.</p>
-                            </div>
-                            <div class="privacy-options" id="privacyOptions">
-                                <button type="button" class="privacy-option" data-value="public">Público</button>
-                                <button type="button" class="privacy-option" data-value="private">Privado</button>
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
             </section>
