@@ -28,7 +28,7 @@ if ($user && isset($user['id'])) {
     $db = Database::getInstance()->getConnection();
 
     $stmt = $db->prepare("
-        SELECT profile_image
+        SELECT profile_image, role
         FROM users
         WHERE id = ?
     ");
@@ -39,6 +39,8 @@ if ($user && isset($user['id'])) {
 
     $userPhoto = $userData['profile_image'] ?? null;
     $_SESSION['user']['profile_image'] = $userPhoto;
+    $_SESSION['user']['role'] = $userData['role'] ?? ($_SESSION['user']['role'] ?? 'user');
+    $user['role'] = $_SESSION['user']['role'];
 }
 $userPhoto = profile_image_url($userPhoto);
 // Determine current page to highlight active navigation link
@@ -66,6 +68,9 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
             <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-semibold nav-link <?= $is_explorar ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Explorar</a>
             <a href="/proyecto7mo/index.php#generos" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Géneros</a>
             <a href="/proyecto7mo/index.php#ranking" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Ranking</a>
+            <?php if (($user['role'] ?? '') === 'admin'): ?>
+                <a href="/proyecto7mo/Frontend/admin.php" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Administracion</a>
+            <?php endif; ?>
         </nav>
 
         <!-- Desktop Actions -->
@@ -140,6 +145,9 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
                             </span>
                             <span class="text-sm text-muted-foreground">Mi perfil</span>
                         </a>
+                        <?php if (($user['role'] ?? '') === 'admin'): ?>
+                            <a href="/proyecto7mo/Frontend/admin.php" class="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors duration-200">Administracion</a>
+                        <?php endif; ?>
                         <a href="/proyecto7mo/index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg font-semibold transition-all duration-200">Salir</a>
                     </div>
                 <?php else: ?>

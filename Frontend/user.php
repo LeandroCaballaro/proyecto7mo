@@ -762,7 +762,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <rect x="10" y="12" width="44" height="38" rx="6" stroke="currentColor" stroke-width="4"/>
                             <path d="M18 43l11-12 8 8 5-6 8 10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                             <circle cx="42" cy="24" r="4" fill="currentColor"/>
-                            <path d="M32 18v16M24 26h16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
                         </svg>
                     </span>
                     <span class="photo-upload-title">Cargar imagen</span>

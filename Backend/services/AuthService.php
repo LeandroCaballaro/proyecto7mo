@@ -77,7 +77,7 @@ class AuthService
             return ['error' => 'Credenciales incorrectas'];
         }
 
-        return $this->buildSession((int) $user['id'], $user['name'], $user['username'] ?? '', $user['email']);
+        return $this->buildSession((int) $user['id'], $user['name'], $user['username'] ?? '', $user['email'], $user['role'] ?? 'user');
     }
 
     public function logout(?string $token): array
@@ -99,7 +99,7 @@ class AuthService
         return $this->userModel->findByToken($token);
     }
 
-    private function buildSession(int $userId, string $name, string $username, string $email): array
+    private function buildSession(int $userId, string $name, string $username, string $email, string $role = 'user'): array
     {
         $token = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', strtotime("+{$this->tokenTtlDays} days"));
@@ -112,6 +112,7 @@ class AuthService
                 'name' => $name,
                 'username' => $username,
                 'email' => $email,
+                'role' => $role,
             ],
             'token' => $token,
             'expires_at' => $expiresAt,

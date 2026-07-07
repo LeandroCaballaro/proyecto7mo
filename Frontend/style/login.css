@@ -150,6 +150,26 @@ input::placeholder {
     border-radius: 6px;
     text-align: center;
 }
+
+.reset-container {
+    max-height: none;
+}
+
+.reset-token-box {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #cacaca;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.reset-token-box a {
+    color: #ff6781;
+    font-weight: 700;
+}
 .divider {
   margin: 10px 0;
   display: flex;

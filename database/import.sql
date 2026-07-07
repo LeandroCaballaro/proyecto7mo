@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   description VARCHAR(100) NULL,
   profile_image VARCHAR(255) NULL,
-  is_public TINYINT(1) NOT NULL DEFAULT 1
+  is_public TINYINT(1) NOT NULL DEFAULT 1,
+  role VARCHAR(20) NOT NULL DEFAULT 'user'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reviewers (
@@ -59,6 +60,15 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   user_id INT NOT NULL,
   token VARCHAR(64) NOT NULL UNIQUE,
   expires_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token VARCHAR(64) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO movies (title, genre, featured, description, year) VALUES

@@ -51,13 +51,15 @@ class Database
             password_hash VARCHAR(255) NOT NULL,
             description VARCHAR(100) NULL,
             profile_image VARCHAR(255) NULL,
-            is_public TINYINT(1) NOT NULL DEFAULT 1
+            is_public TINYINT(1) NOT NULL DEFAULT 1,
+            role VARCHAR(20) NOT NULL DEFAULT 'user'
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $userColumns = [
             'username' => "ALTER TABLE users ADD COLUMN username VARCHAR(20) NULL UNIQUE AFTER name",
             'description' => "ALTER TABLE users ADD COLUMN description VARCHAR(100) NULL AFTER password_hash",
             'profile_image' => "ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL AFTER description",
             'is_public' => "ALTER TABLE users ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 1 AFTER profile_image",
+            'role' => "ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user' AFTER is_public",
         ];
         foreach ($userColumns as $column => $sql) {
             $exists = $this->pdo->query("SHOW COLUMNS FROM users LIKE " . $this->pdo->quote($column))->fetch(PDO::FETCH_ASSOC);
@@ -65,6 +67,15 @@ class Database
                 $this->pdo->exec($sql);
             }
         }
+
+        $this->pdo->exec("CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(64) NOT NULL UNIQUE,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS reviewers (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -123,6 +134,13 @@ class Database
             $s->execute(['Carlos Pérez', 120]);
             $s->execute(['Ana Gómez', 95]);
             $s->execute(['María López', 80]);
+        }
+
+        if ((int) $this->pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn() === 0) {
+            $firstUserId = $this->pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
+            if ($firstUserId) {
+                $this->pdo->prepare("UPDATE users SET role = 'admin' WHERE id = ?")->execute([(int) $firstUserId]);
+            }
         }
     }
 }

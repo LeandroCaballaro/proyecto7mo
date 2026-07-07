@@ -18,7 +18,7 @@ class UserModel
     public function findByEmail(string $email)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, username, email, password_hash FROM users WHERE email = ? LIMIT 1"
+            "SELECT id, name, username, email, password_hash, role FROM users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([trim($email)]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -27,7 +27,7 @@ class UserModel
     public function findByUsername(string $username)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, username, email FROM users WHERE username = ? LIMIT 1"
+            "SELECT id, name, username, email, role FROM users WHERE username = ? LIMIT 1"
         );
         $stmt->execute([trim($username)]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -39,7 +39,7 @@ class UserModel
     public function findById(int $id)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, username, email FROM users WHERE id = ? LIMIT 1"
+            "SELECT id, name, username, email, role FROM users WHERE id = ? LIMIT 1"
         );
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -73,7 +73,7 @@ class UserModel
     public function findByToken(string $token)
     {
         $stmt = $this->pdo->prepare(
-            "SELECT u.id, u.name, u.username, u.email
+            "SELECT u.id, u.name, u.username, u.email, u.role
              FROM api_tokens t
              JOIN users u ON u.id = t.user_id
              WHERE t.token = ? AND t.expires_at > NOW()

@@ -87,6 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <button type="submit" class="btn">Iniciar Sesion</button>
 
+      <p class="text-center text-xs text-muted-foreground mt-3">
+        <a href="/proyecto7mo/Frontend/forgot_password.php" class="text-primary hover:underline font-semibold">Olvidaste tu contrasena?</a>
+      </p>
+
       <p class="text-center text-xs text-muted-foreground mt-4">
         No tienes cuenta? <a href="/proyecto7mo/Frontend/sing_up.php" class="text-primary hover:underline font-semibold">Registrate gratis</a>
       </p>
