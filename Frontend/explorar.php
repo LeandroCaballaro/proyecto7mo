@@ -499,6 +499,7 @@ if (!empty($_SESSION['user']['id'])) {
         <?php foreach ($peliculas as $p): ?>
             "<?= (int)$p['id'] ?>": {
                 id: <?= (int)$p['id'] ?>,
+                author_user_id: <?= isset($p['user_id']) ? (int) $p['user_id'] : 0 ?>,
                 title: <?= json_encode($p['title']) ?>,
                 genre: <?= json_encode($p['genre'] ?? 'General') ?>,
                 year: <?= (int)($p['year'] ?? 2024) ?>,
@@ -750,11 +751,14 @@ if (!empty($_SESSION['user']['id'])) {
             `;
         } else {
             movie.reviews.forEach(rev => {
+                const isAuthorReview = Number(movie.author_user_id) > 0 && Number(rev.user_id) === Number(movie.author_user_id);
+                const authorBadge = isAuthorReview ? '<span class="review-author-badge">Autor</span>' : '';
                 htmlContent += `
                     <div class="rounded-xl border border-border bg-background/30 p-4 mb-4 review-item transition-all duration-200">
                         <div class="flex items-center justify-between gap-3">
-                            <div>
+                            <div class="review-author-line">
                                 <span class="font-extrabold text-foreground text-sm">${escapeHtml(rev.user_name)}</span>
+                                ${authorBadge}
                                 <span class="text-yellow-400 text-xs ml-2">${'★'.repeat(rev.rating)}${'☆'.repeat(5 - rev.rating)}</span>
                             </div>
                         </div>
