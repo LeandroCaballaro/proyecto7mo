@@ -103,6 +103,14 @@ class Database
             $this->pdo->exec("ALTER TABLE reviews ADD COLUMN image_url VARCHAR(255) NULL AFTER rating");
         }
 
+        $this->pdo->exec("CREATE TABLE IF NOT EXISTS favorite_movies (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            movie_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_user_movie_favorite (user_id, movie_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS review_responses (
             id INT AUTO_INCREMENT PRIMARY KEY,
             review_id INT NOT NULL,

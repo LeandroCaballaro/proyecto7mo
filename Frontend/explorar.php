@@ -155,7 +155,7 @@ function ensure_favorites_table(PDO $db): void
 function movieCoverRelativePath(int $movieId): ?string
 {
     foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
-        $relative = 'public/covers/' . $movieId . '.' . $ext;
+        $relative = 'Frontend/public/covers/' . $movieId . '.' . $ext;
         if (file_exists(__DIR__ . '/../' . $relative)) {
             return $relative;
         }
@@ -166,7 +166,7 @@ function movieCoverRelativePath(int $movieId): ?string
 
 function clearMovieCoverFiles(int $movieId): void
 {
-    $files = glob(__DIR__ . '/../public/covers/' . $movieId . '.*');
+    $files = glob(__DIR__ . '/public/covers/' . $movieId . '.*');
     if (!is_array($files)) {
         return;
     }
@@ -211,7 +211,7 @@ function saveMovieCoverFromUpload(array $file, int $movieId): array
         return ['ok' => false, 'error' => 'Formato de portada no permitido (JPG, PNG, WEBP o GIF)'];
     }
 
-    $coverDir = __DIR__ . '/../public/covers';
+    $coverDir = __DIR__ . '/public/covers';
     if (!is_dir($coverDir) && !mkdir($coverDir, 0755, true)) {
         return ['ok' => false, 'error' => 'No se pudo preparar la carpeta de portadas'];
     }
@@ -262,7 +262,7 @@ function saveMovieCoverFromUrl(string $url, int $movieId): array
         return ['ok' => false, 'error' => 'La URL no apunta a una imagen válida (JPG, PNG, WEBP o GIF)'];
     }
 
-    $coverDir = __DIR__ . '/../public/covers';
+    $coverDir = __DIR__ . '/public/covers';
     if (!is_dir($coverDir) && !mkdir($coverDir, 0755, true)) {
         return ['ok' => false, 'error' => 'No se pudo preparar la carpeta de portadas'];
     }
@@ -474,7 +474,7 @@ if (!empty($_SESSION['user']['id'])) {
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style/explorar.css">
     <link href="style/styles.css" rel="stylesheet">
-    <link rel="icon" href="../public/nhlogo.png" type="image/png">
+    <link rel="icon" href="public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
     <?php include 'header.php'; ?>

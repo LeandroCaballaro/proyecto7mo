@@ -8,13 +8,14 @@ CREATE TABLE IF NOT EXISTS movies (
   featured TINYINT(1) DEFAULT 0,
   description TEXT,
   year INT,
-  movie_author VARCHAR(255) NULL
+  movie_author VARCHAR(255) NULL,
+  user_id INT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  username VARCHAR(20) NOT NULL UNIQUE,
+  username VARCHAR(20) NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   description VARCHAR(100) NULL,
@@ -38,6 +39,15 @@ CREATE TABLE IF NOT EXISTS reviews (
   image_url VARCHAR(255) NULL,
   comment TEXT,
   UNIQUE KEY uk_user_movie (user_id, movie_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS review_responses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  review_id INT NOT NULL,
+  user_id INT NOT NULL,
+  rating TINYINT NOT NULL,
+  comment TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS genre_reputation (
@@ -72,11 +82,22 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO movies (title, genre, featured, description, year, movie_author) VALUES
-('El Gran Viaje', 'Aventura', 1, 'Una épica aventura entre mundos.', 2021, 'NexoHub'),
-('Amor en París', 'Romance', 0, 'Drama romántico en París.', 2019, 'NexoHub'),
-('Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022, 'NexoHub');
+INSERT INTO movies (id, title, genre, featured, description, year, movie_author) VALUES
+(1, 'El Gran Viaje', 'Aventura', 1, 'Una epica aventura entre mundos.', 2021, 'NexoHub'),
+(2, 'Amor en Paris', 'Romance', 0, 'Drama romantico en Paris.', 2019, 'NexoHub'),
+(3, 'Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022, 'NexoHub')
+ON DUPLICATE KEY UPDATE
+title = VALUES(title),
+genre = VALUES(genre),
+featured = VALUES(featured),
+description = VALUES(description),
+year = VALUES(year),
+movie_author = VALUES(movie_author);
 
-INSERT INTO reviewers (user_id, name, reputation) VALUES
-(NULL, 'Carlos Pérez', 120),
-(NULL, 'Ana Gómez', 95);
+INSERT INTO reviewers (id, user_id, name, reputation) VALUES
+(1, NULL, 'Carlos Perez', 120),
+(2, NULL, 'Ana Gomez', 95)
+ON DUPLICATE KEY UPDATE
+user_id = VALUES(user_id),
+name = VALUES(name),
+reputation = VALUES(reputation);

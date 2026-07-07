@@ -4,7 +4,7 @@ $peliculas = api_get('movies/featured') ?: [];
 function movieCoverRelativePathFeatured(int $movieId): ?string
 {
     foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
-        $relative = 'public/covers/' . $movieId . '.' . $ext;
+        $relative = 'Frontend/public/covers/' . $movieId . '.' . $ext;
         if (file_exists(__DIR__ . '/../' . $relative)) {
             return $relative;
         }

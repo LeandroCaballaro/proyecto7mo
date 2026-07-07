@@ -25,7 +25,7 @@ if (isset($_GET['logout'])) {
     <title>NexoHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="Frontend/style/styles.css" rel="stylesheet">
-    <link rel="icon" href="public/nhlogo.png" type="image/png">
+    <link rel="icon" href="Frontend/public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
     <?php include 'Frontend/header.php'; ?>

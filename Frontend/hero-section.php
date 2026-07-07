@@ -75,7 +75,7 @@
                     <!-- Glow effect in background -->
                     <div class="absolute inset-0 bg-primary/10 rounded-full blur-3xl opacity-60 animate-pulse"></div>
                     <!-- Logo image -->
-                    <img src="public/NexoHub%20Logo.png" alt="NexoHub Logo" class="nexologo">
+                    <img src="/proyecto7mo/Frontend/public/NexoHub%20Logo.png" alt="NexoHub Logo" class="nexologo">
                 </div>
             </div>
         </div>
