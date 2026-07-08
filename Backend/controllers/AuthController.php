@@ -33,7 +33,7 @@ class AuthController
     {
         $data = $this->body();
         $result = $this->service->login(
-            $data['email'] ?? '',
+            $data['identifier'] ?? $data['email'] ?? '',
             $data['password'] ?? ''
         );
 

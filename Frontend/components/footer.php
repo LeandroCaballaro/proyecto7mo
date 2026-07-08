@@ -5,7 +5,7 @@
         <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             <!-- Brand -->
             <div class="space-y-4">
-                <a href="/" class="flex items-center gap-2">
+                <a href="/proyecto7mo/index.php" class="flex items-center gap-2">
                     <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                         <svg class="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16l13-8L7 4z"></path>
@@ -51,7 +51,7 @@
             <div class="space-y-4">
                 <h3 class="font-semibold text-foreground">Explorar</h3>
                 <ul class="space-y-2 text-sm">
-                    <li><a href="/explorar.php" class="text-muted-foreground transition-colors hover:text-primary">Películas Populares</a></li>
+                    <li><a href="/proyecto7mo/Frontend/explorar.php" class="text-muted-foreground transition-colors hover:text-primary">Películas Populares</a></li>
                     <li><a href="#" class="text-muted-foreground transition-colors hover:text-primary">Estrenos Recientes</a></li>
                     <li><a href="#" class="text-muted-foreground transition-colors hover:text-primary">Top Reseñadores</a></li>
                     <li><a href="#" class="text-muted-foreground transition-colors hover:text-primary">Géneros</a></li>

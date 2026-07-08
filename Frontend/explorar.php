@@ -28,10 +28,23 @@ function api_post($route, $data, $token = null)
     return $raw ? json_decode($raw, true) : null;
 }
 
+function json_response(array $payload, int $statusCode = 200): void
+{
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+
+function js_json($value): string
+{
+    return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+}
+
 $genre = $_GET['genre'] ?? '';
 $q = trim($_GET['q'] ?? '');
 $msg = '';
-$active_movie_id = 0;
+$active_movie_id = max(0, (int) ($_GET['movie_id'] ?? 0));
 $favoriteMovieIds = [];
 $allowedMovieGenres = ['Accion', 'Aventura', 'Animacion', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasia', 'Terror', 'Misterio', 'Romance', 'Ciencia ficcion', 'Thriller'];
 
@@ -135,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'movie_a
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'movie_api_meta') {
     header('Content-Type: application/json; charset=utf-8');
     $meta = movieApiMeta($_GET['id'] ?? '');
-    echo json_encode($meta ? ['movie' => $meta] : ['error' => 'No se encontro la pelicula'], JSON_UNESCAPED_UNICODE);
+    echo json_encode($meta ? ['movie' => $meta] : ['error' => 'No se encontro la película'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -283,39 +296,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = 'Debes iniciar sesión para publicar películas o responder reseñas.';
     } else {
         if ($action === 'toggle_favorite') {
-            header('Content-Type: application/json');
             $userId = (int) ($_SESSION['user']['id'] ?? 0);
             $movieId = (int) ($_POST['movie_id'] ?? 0);
 
             if (!$userId || !$movieId) {
-                echo json_encode(['success' => false, 'message' => 'No se pudo guardar el favorito']);
-                exit;
+                json_response(['success' => false, 'message' => 'No se pudo guardar el favorito'], 400);
             }
 
             try {
                 $db = Database::getInstance()->getConnection();
                 ensure_favorites_table($db);
+
+                $movieExists = $db->prepare("SELECT id FROM movies WHERE id = ? LIMIT 1");
+                $movieExists->execute([$movieId]);
+                if (!$movieExists->fetchColumn()) {
+                    json_response(['success' => false, 'message' => 'La película no existe'], 404);
+                }
+
                 $stmt = $db->prepare("SELECT id FROM favorite_movies WHERE user_id = ? AND movie_id = ? LIMIT 1");
                 $stmt->execute([$userId, $movieId]);
 
                 if ($stmt->fetch(PDO::FETCH_ASSOC)) {
                     $db->prepare("DELETE FROM favorite_movies WHERE user_id = ? AND movie_id = ?")->execute([$userId, $movieId]);
-                    echo json_encode(['success' => true, 'favorite' => false]);
+                    json_response(['success' => true, 'favorite' => false]);
                 } else {
                     $db->prepare("INSERT INTO favorite_movies (user_id, movie_id) VALUES (?, ?)")->execute([$userId, $movieId]);
-                    echo json_encode(['success' => true, 'favorite' => true]);
+                    json_response(['success' => true, 'favorite' => true]);
                 }
             } catch (Exception $e) {
-                echo json_encode(['success' => false, 'message' => 'No se pudo guardar el favorito']);
+                json_response(['success' => false, 'message' => 'No se pudo guardar el favorito'], 500);
             }
-            exit;
         }
 
         if ($action === 'create_movie') {
             $movieGenre = trim((string) ($_POST['genre'] ?? ''));
             $movieDescription = trim((string) ($_POST['description'] ?? ''));
             $coverUrlInput = trim((string) ($_POST['cover_image_url'] ?? ''));
+            $externalMovieId = trim((string) ($_POST['external_movie_id'] ?? ''));
             $hasCoverFile = (($_FILES['cover_image_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE);
+            $autoApproved = $externalMovieId !== '' && $coverUrlInput !== '' && !$hasCoverFile;
 
             if (!in_array($movieGenre, $allowedMovieGenres, true)) {
                 $msg = 'Debes seleccionar un género válido.';
@@ -339,7 +358,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $movieGenre,
                 (int) ($_POST['year'] ?? 0),
                 $movieDescription,
-                $_POST['movie_author'] ?? ''
+                $_POST['movie_author'] ?? '',
+                $autoApproved
             );
             if (isset($res['ok'], $res['movie_id'])) {
                 $movieId = (int) $res['movie_id'];
@@ -356,7 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } elseif (!empty($coverUrlResult['saved'])) {
                         $msg = 'Película publicada correctamente con portada.';
                     } else {
-                        $msg = 'Película publicada correctamente.';
+                        $msg = $autoApproved ? 'Película publicada correctamente.' : 'Película enviada a revisión.';
                     }
                 }
             } else {
@@ -369,7 +389,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 goto end_post_actions;
             }
             $res = api_post('reviews/' . urlencode((int) ($_POST['review_id'] ?? 0)) . '/responses', [
-                'rating' => (int) ($_POST['rating'] ?? 0),
                 'comment' => $_POST['comment'] ?? '',
             ], $_SESSION['token']);
             $msg = isset($res['ok']) ? 'Respuesta enviada correctamente.' : ($res['error'] ?? 'Error al responder la reseña');
@@ -396,11 +415,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     end_post_actions:
 }
 
-$peliculas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('movies');
-$peliculas = is_array($peliculas) ? $peliculas : [];
+$películas = $genre ? api_get('movies/genre/' . urlencode($genre)) : api_get('movies');
+$películas = is_array($películas) ? $películas : [];
 
 $seenMovies = [];
-$peliculas = array_values(array_filter($peliculas, function ($movie) use (&$seenMovies) {
+$películas = array_values(array_filter($películas, function ($movie) use (&$seenMovies) {
     $key = mb_strtolower(trim((string) ($movie['title'] ?? '')), 'UTF-8') . '|' . (int) ($movie['year'] ?? 0);
     if (isset($seenMovies[$key])) {
         return false;
@@ -410,38 +429,54 @@ $peliculas = array_values(array_filter($peliculas, function ($movie) use (&$seen
 }));
 
 if ($q !== '') {
-    $peliculas = array_values(array_filter($peliculas, function ($movie) use ($q) {
+    $películas = array_values(array_filter($películas, function ($movie) use ($q) {
         return stripos($movie['title'] ?? '', $q) !== false;
     }));
 }
 
-usort($peliculas, function ($a, $b) {
-    return strcasecmp($a['title'] ?? '', $b['title'] ?? '');
+$sort = $_GET['sort'] ?? 'alphabetical';
+$validSorts = ['alphabetical', 'recent', 'reviews', 'rating'];
+if (!in_array($sort, $validSorts, true)) {
+    $sort = 'alphabetical';
+}
+
+usort($películas, function ($a, $b) use ($sort) {
+    return match ($sort) {
+        'recent' => ((int) ($b['year'] ?? 0) <=> (int) ($a['year'] ?? 0)) ?: strcasecmp($a['title'] ?? '', $b['title'] ?? ''),
+        'reviews' => ((int) ($b['reviews_count'] ?? 0) <=> (int) ($a['reviews_count'] ?? 0)) ?: strcasecmp($a['title'] ?? '', $b['title'] ?? ''),
+        'rating' => ((float) ($b['average_rating'] ?? 0) <=> (float) ($a['average_rating'] ?? 0)) ?: ((int) ($b['reviews_count'] ?? 0) <=> (int) ($a['reviews_count'] ?? 0)),
+        default => strcasecmp($a['title'] ?? '', $b['title'] ?? ''),
+    };
 });
 
-$moviesPerPage = 12;
+$showGenreRows = $genre === '' && $q === '';
+$moviesPerPage = $showGenreRows ? max(1, count($películas)) : 12;
 $page = max(1, (int) ($_GET['page'] ?? 1));
-$totalMovies = count($peliculas);
+$totalMovies = count($películas);
 $totalPages = max(1, (int) ceil($totalMovies / $moviesPerPage));
 $page = min($page, $totalPages);
-$visiblePeliculas = array_slice($peliculas, ($page - 1) * $moviesPerPage, $moviesPerPage);
+$visiblePelículas = array_slice($películas, ($page - 1) * $moviesPerPage, $moviesPerPage);
 
-if ($active_movie_id > 0 && !in_array($active_movie_id, array_map(fn($movie) => (int) ($movie['id'] ?? 0), $visiblePeliculas), true)) {
-    foreach ($peliculas as $movie) {
+if ($active_movie_id > 0 && !in_array($active_movie_id, array_map(fn($movie) => (int) ($movie['id'] ?? 0), $visiblePelículas), true)) {
+    foreach ($películas as $movie) {
         if ((int) ($movie['id'] ?? 0) === $active_movie_id) {
-            array_unshift($visiblePeliculas, $movie);
+            array_unshift($visiblePelículas, $movie);
             break;
         }
     }
 }
 
-foreach ($visiblePeliculas as &$movie) {
+foreach ($visiblePelículas as &$movie) {
     $coverPath = movieCoverRelativePath((int) $movie['id']);
     $movie['_cover_path'] = $coverPath;
     $movie['_cover_url'] = $coverPath !== null ? '/proyecto7mo/' . $coverPath : '';
     $movie['_has_cover'] = $coverPath !== null;
 }
 unset($movie);
+$moviesByGenre = [];
+foreach ($visiblePelículas as $movie) {
+    $moviesByGenre[$movie['genre'] ?? 'General'][] = $movie;
+}
 
 $nextPageUrl = '';
 if ($page < $totalPages) {
@@ -472,12 +507,12 @@ if (!empty($_SESSION['user']['id'])) {
     <title>Explorar Películas - NexoHub</title>
     <meta name="description" content="Explora películas por género y reseñas de la comunidad">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style/explorar.css">
-    <link href="style/styles.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/explorar.css">
+    <link href="assets/css/styles.css" rel="stylesheet">
     <link rel="icon" href="public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-    <?php include 'header.php'; ?>
+    <?php include 'components/header.php'; ?>
 
     <main class="flex-1 py-12">
         <div class="container mx-auto px-4">
@@ -511,8 +546,8 @@ if (!empty($_SESSION['user']['id'])) {
                     <?php if ($genre): ?>
                         <input type="hidden" name="genre" value="<?= htmlspecialchars($genre) ?>">
                     <?php endif; ?>
-                    <input id="exploreSearchInput" type="search" name="q" value="<?= htmlspecialchars($q) ?>" class="explore-search-input" placeholder="Buscar pelicula por nombre">
-                    <button type="submit" class="explore-search-button" aria-label="Buscar pelicula">
+                    <input id="exploreSearchInput" type="search" name="q" value="<?= htmlspecialchars($q) ?>" class="explore-search-input" placeholder="Buscar película por nombre">
+                    <button type="submit" class="explore-search-button" aria-label="Buscar película">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"></path>
                         </svg>
@@ -526,12 +561,22 @@ if (!empty($_SESSION['user']['id'])) {
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <select class="rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none" style="display:none">
-                    <option>Ordenar por: Rating</option>
-                    <option>Ordenar por: Año</option>
-                    <option>Ordenar por: Popularidad</option>
+                <select onchange="location = this.value;" class="rounded-lg border border-border bg-card px-4 py-2 text-foreground focus:outline-none" aria-label="Filtrar películas">
+                    <?php
+                    $sortBase = ['genre' => $genre ?: null, 'q' => $q ?: null];
+                    $sortLabels = [
+                        'alphabetical' => 'Orden alfabético',
+                        'recent' => 'Más reciente',
+                        'reviews' => 'Más reseñas',
+                        'rating' => 'Mejor valoración',
+                    ];
+                    ?>
+                    <?php foreach ($sortLabels as $sortValue => $sortLabel): ?>
+                        <option value="explorar.php?<?= http_build_query(array_filter($sortBase + ['sort' => $sortValue], fn($value) => $value !== null && $value !== '')) ?>" <?= $sort === $sortValue ? 'selected' : '' ?>>
+                            🔎 <?= htmlspecialchars($sortLabel) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
-                <span class="alphabetical-badge">Orden alfabetico</span>
             </div>
 
             <?php if (!empty($_SESSION['user'])): ?>
@@ -543,6 +588,7 @@ if (!empty($_SESSION['user']['id'])) {
                         </div>
                     <form method="post" enctype="multipart/form-data" class="grid gap-4 lg:grid-cols-2 create-movie-form" onsubmit="return validateCreateMovieForm(this)">
                         <input type="hidden" name="action" value="create_movie">
+                        <input type="hidden" name="external_movie_id" value="">
                         <div class="movie-picker-panel lg:col-span-2">
                             <button type="button" class="movie-picker-toggle" onclick="toggleMoviePicker()">
                                 Seleccionar película
@@ -606,15 +652,50 @@ if (!empty($_SESSION['user']['id'])) {
                 </div>
             <?php endif; ?>
 
-            <!-- Películas Grid -->
-            <?php if (empty($peliculas)): ?>
+            <!-- Películas -->
+            <?php if (empty($películas)): ?>
                 <div class="text-center py-20 bg-card rounded-xl border border-border">
                     <span class="text-4xl">🎬</span>
                     <p class="mt-4 text-muted-foreground">No se encontraron películas en esta categoría.</p>
                 </div>
+            <?php elseif ($showGenreRows): ?>
+                <div class="explore-genre-sections">
+                    <?php foreach ($moviesByGenre as $sectionGenre => $sectionMovies): ?>
+                        <section class="explore-genre-section">
+                            <div class="explore-genre-header">
+                                <h2><?= htmlspecialchars($sectionGenre) ?></h2>
+                                <div class="explore-row-controls">
+                                    <button type="button" onclick="scrollMovieSection('genre-<?= md5($sectionGenre) ?>', -1)" aria-label="Ver anteriores">‹</button>
+                                    <button type="button" onclick="scrollMovieSection('genre-<?= md5($sectionGenre) ?>', 1)" aria-label="Ver siguientes">›</button>
+                                </div>
+                            </div>
+                            <div id="genre-<?= md5($sectionGenre) ?>" class="explore-movie-row">
+                                <?php foreach ($sectionMovies as $p): ?>
+                                    <div class="movie-card-container" onclick="openMovieModal(<?= (int)$p['id'] ?>)">
+                                        <div class="movie-flip-card">
+                                            <div class="movie-flip-card-front relative flex flex-col justify-between">
+                                                <?php if (!empty($p['_cover_path'])): ?>
+                                                    <img src="<?= htmlspecialchars($p['_cover_url']) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                                                <?php else: ?>
+                                                    <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/30 flex flex-col items-center justify-center p-4">
+                                                        <span class="text-5xl mb-4">🎥</span>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <div class="movie-poster-overlay">
+                                                    <h3 class="text-xl font-bold text-foreground line-clamp-2"><?= htmlspecialchars($p['title']) ?></h3>
+                                                    <p class="text-xs text-muted-foreground mt-1"><?= htmlspecialchars($p['genre'] ?? 'General') ?> • <?= (int) ($p['year'] ?? 2024) ?><span class="click-here">Click Aquí</span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
             <?php else: ?>
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    <?php foreach ($visiblePeliculas as $p): ?>
+                    <?php foreach ($visiblePelículas as $p): ?>
                         <div class="movie-card-container" onclick="openMovieModal(<?= (int)$p['id'] ?>)">
                             <div class="movie-flip-card">
                                 <!-- FRONT SIDE -->
@@ -661,9 +742,9 @@ if (!empty($_SESSION['user']['id'])) {
             <!-- LEFT COLUMN: Movie Poster -->
             <div class="modal-left">
                 <img id="modalMoviePoster" src="" alt="Portada" class="modal-poster-img">
-                <button type="button" id="favoriteMovieBtn" class="favorite-movie-btn" aria-label="Agregar a favoritos">☆</button>
+                <button type="button" id="favoriteMovieBtn" class="favorite-movie-btn" aria-label="Agregar a favoritos">&#9734;</button>
                 <div class="modal-poster-overlay">
-                    <span id="modalMovieGenreYear" class="text-xs font-bold text-primary tracking-wide uppercase">GÉNERO • AÑO</span>
+                    <span id="modalMovieGenreYear" class="text-xs font-bold text-primary tracking-wide uppercase">GÉNERO &bull; AÑO</span>
                     <h2 id="modalMovieTitle" class="text-2xl md:text-3xl font-extrabold text-foreground mt-1">Título de la Película</h2>
                     <p id="modalMovieAuthor" class="modal-movie-author"></p>
                     <p id="modalMovieDesc" class="text-sm text-muted-foreground mt-3 line-clamp-4">Descripción de la película...</p>
@@ -673,7 +754,7 @@ if (!empty($_SESSION['user']['id'])) {
             <!-- RIGHT COLUMN: Reviews Feed -->
             <div class="modal-right">
                 <div class="modal-header">
-                    <span class="text-sm font-bold text-muted-foreground uppercase tracking-widest">Feed de Reseñas</span>
+                    <span class="text-sm font-bold text-muted-foreground uppercase tracking-widest">Reseñas</span>
                     <div class="modal-close-btn" onclick="closeMovieModal()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -688,22 +769,22 @@ if (!empty($_SESSION['user']['id'])) {
         </div>
     </div>
 
-    <?php include 'footer.php'; ?>
+    <?php include 'components/footer.php'; ?>
 
     <script>
     // Prepare all movie data on the client side
     const moviesData = {
-        <?php foreach ($visiblePeliculas as $p): ?>
+        <?php foreach ($visiblePelículas as $p): ?>
             "<?= (int)$p['id'] ?>": {
                 id: <?= (int)$p['id'] ?>,
                 author_user_id: <?= isset($p['user_id']) ? (int) $p['user_id'] : 0 ?>,
-                author_name: <?= json_encode($p['author_name'] ?? '') ?>,
-                movie_author: <?= json_encode($p['movie_author'] ?? '') ?>,
-                title: <?= json_encode($p['title']) ?>,
-                genre: <?= json_encode($p['genre'] ?? 'General') ?>,
+                author_name: <?= js_json($p['author_name'] ?? '') ?>,
+                movie_author: <?= js_json($p['movie_author'] ?? '') ?>,
+                title: <?= js_json($p['title']) ?>,
+                genre: <?= js_json($p['genre'] ?? 'General') ?>,
                 year: <?= (int)($p['year'] ?? 2024) ?>,
-                description: <?= json_encode($p['description'] ?? '') ?>,
-                coverUrl: <?= json_encode($p['_cover_url'] ?? '') ?>,
+                description: <?= js_json($p['description'] ?? '') ?>,
+                coverUrl: <?= js_json($p['_cover_url'] ?? '') ?>,
                 hasCover: <?= !empty($p['_has_cover']) ? 'true' : 'false' ?>,
                 favorite: <?= in_array((int) $p['id'], $favoriteMovieIds, true) ? 'true' : 'false' ?>,
                 reviews: null
@@ -711,8 +792,10 @@ if (!empty($_SESSION['user']['id'])) {
         <?php endforeach; ?>
     };
 
-    const currentUser = <?= isset($_SESSION['user']) ? json_encode($_SESSION['user']) : 'null' ?>;
+    const currentUser = <?= isset($_SESSION['user']) ? js_json($_SESSION['user']) : 'null' ?>;
     const activeMovieId = <?= $active_movie_id ?>;
+    const activeReviewId = <?= max(0, (int) ($_GET['review_id'] ?? 0)) ?>;
+    let currentModalMovie = null;
 
     // Helper to safely escape HTML
     function escapeHtml(text) {
@@ -723,6 +806,15 @@ if (!empty($_SESSION['user']['id'])) {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    function reviewStars(rating) {
+        const value = Math.max(0, Math.min(5, Number(rating) || 0));
+        return `${'\u2605'.repeat(value)}${'\u2606'.repeat(5 - value)}`;
+    }
+
+    function userInitial(name) {
+        return escapeHtml(String(name || '?').trim().charAt(0).toUpperCase() || '?');
     }
 
     function validateCreateMovieForm(form) {
@@ -841,6 +933,7 @@ if (!empty($_SESSION['user']['id'])) {
         if (!form) return;
 
         form.elements.title.value = movie.title || '';
+        form.elements.external_movie_id.value = movie.id || '';
         form.elements.movie_author.value = movie.movie_author || 'Desconocido';
         form.elements.genre.value = movie.genre || '';
         form.elements.year.value = movie.year || new Date().getFullYear();
@@ -857,6 +950,7 @@ if (!empty($_SESSION['user']['id'])) {
 
         form.reset();
         form.querySelector('input[name="action"]').value = 'create_movie';
+        form.elements.external_movie_id.value = '';
         form.elements.year.value = new Date().getFullYear();
         updateCoverFileLabel(form.querySelector('.js-cover-file'));
         syncCoverRequired(form);
@@ -923,7 +1017,7 @@ if (!empty($_SESSION['user']['id'])) {
         const authorEl = document.getElementById('modalMovieAuthor');
         const visibleAuthorName = movie.movie_author || movie.author_name;
         if (visibleAuthorName) {
-            authorEl.innerText = `Autor: ${visibleAuthorName}`;
+            authorEl.innerText = `Producido por: ${visibleAuthorName}`;
             authorEl.style.display = 'block';
         } else {
             authorEl.innerText = '';
@@ -962,6 +1056,7 @@ if (!empty($_SESSION['user']['id'])) {
         btn.textContent = movie.favorite ? '★' : '☆';
         btn.classList.toggle('active', !!movie.favorite);
         btn.title = movie.favorite ? 'Quitar de favoritos' : 'Agregar a favoritos';
+        btn.setAttribute('aria-label', btn.title);
     }
 
     async function toggleFavorite(movieId) {
@@ -972,28 +1067,76 @@ if (!empty($_SESSION['user']['id'])) {
 
         const movie = moviesData[movieId];
         if (!movie) return;
+        currentModalMovie = movie;
 
-        const response = await fetch('/proyecto7mo/Frontend/explorar.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({
-                action: 'toggle_favorite',
-                movie_id: movieId
-            })
-        });
-        const data = await response.json();
+        const btn = document.getElementById('favoriteMovieBtn');
+        if (btn) btn.disabled = true;
+
+        let data = null;
+        try {
+            const response = await fetch('/proyecto7mo/Frontend/api/favorite_movie.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                credentials: 'same-origin',
+                body: new URLSearchParams({
+                    movie_id: movieId
+                })
+            });
+            data = await response.json();
+        } catch (error) {
+            data = {success: false, message: 'No se pudo guardar el favorito'};
+        } finally {
+            if (btn) btn.disabled = false;
+        }
 
         if (data.success) {
             movie.favorite = !!data.favorite;
             updateFavoriteButton(movie);
+        } else if (data.message) {
+            alert(data.message);
         }
     }
 
     const favoriteMovieBtn = document.getElementById('favoriteMovieBtn');
     if (favoriteMovieBtn) {
-        favoriteMovieBtn.addEventListener('click', () => {
+        favoriteMovieBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             toggleFavorite(favoriteMovieBtn.dataset.movieId);
         });
+    }
+
+    async function toggleReviewHeart(reviewId) {
+        if (!currentUser) {
+            window.location.href = '/proyecto7mo/Frontend/login.php';
+            return;
+        }
+
+        const btn = document.getElementById(`review-heart-${reviewId}`);
+        if (btn) btn.disabled = true;
+
+        try {
+            const response = await fetch(`/proyecto7mo/Backend/public/api.php?route=${encodeURIComponent(`reviews/${reviewId}/heart`)}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer <?= htmlspecialchars($_SESSION['token'] ?? '') ?>`}
+            });
+            const data = await response.json();
+            if (!data.ok) {
+                alert(data.error || 'No se pudo guardar el corazon.');
+                return;
+            }
+            const countEl = document.getElementById(`review-heart-count-${reviewId}`);
+            if (countEl) countEl.textContent = data.hearts_count;
+            if (btn) btn.classList.toggle('active', !!data.hearted);
+            if (currentModalMovie && Array.isArray(currentModalMovie.reviews)) {
+                const review = currentModalMovie.reviews.find(item => Number(item.id) === Number(reviewId));
+                if (review) review.hearts_count = Number(data.hearts_count || 0);
+            }
+        } catch (error) {
+            alert('No se pudo guardar el corazon.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
     }
 
     // Escape key closes modal
@@ -1021,21 +1164,22 @@ if (!empty($_SESSION['user']['id'])) {
     // Render responses markup
     function renderResponses(responses) {
         if (responses.length === 0) {
-            return `<p class="text-xs text-muted-foreground italic pl-4 opacity-75">Sé el primero en responder...</p>`;
+            return `<p class="review-reply-empty">Todavía no hay respuestas.</p>`;
         }
         return responses.map(resp => `
-            <div class="pl-4 border-l-2 border-primary/30 py-1.5 review-item">
-                <div class="flex items-center justify-between gap-3 text-xs mb-1">
-                    <span class="font-bold text-foreground">${escapeHtml(resp.user_name)}</span>
-                    <span class="text-yellow-400 font-normal">${'★'.repeat(resp.rating)}${'☆'.repeat(5 - resp.rating)}</span>
+            <article class="review-reply-card">
+                <div class="review-reply-avatar">${userInitial(resp.user_name)}</div>
+                <div class="review-reply-content">
+                    <div class="review-reply-header">
+                        <strong>${escapeHtml(resp.user_name)}</strong>
+                    </div>
+                    <p>${escapeHtml(resp.comment)}</p>
                 </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">${escapeHtml(resp.comment)}</p>
-            </div>
+            </article>
         `).join('');
     }
 
-    function reviewsCacheKey(movieId) {
-        return `nexohub_movie_reviews_${movieId}`;
+    function reviewsCacheKey(movieId) {        return `nexohub_movie_reviews_${movieId}`;
     }
 
     function getCachedReviews(movieId) {
@@ -1128,11 +1272,14 @@ if (!empty($_SESSION['user']['id'])) {
         }
 
         try {
-            const reviewsResponse = await fetch(`/proyecto7mo/Backend/public/api.php?route=${encodeURIComponent(`movies/${movie.id}/reviews`)}`);
+            const sort = document.getElementById('reviewSortSelect')?.value || 'recent';
+            const reviewsResponse = await fetch(`/proyecto7mo/Backend/public/api.php?route=${encodeURIComponent(`movies/${movie.id}/reviews`)}&sort=${encodeURIComponent(sort)}`);
             const reviews = await reviewsResponse.json();
             const normalizedReviews = Array.isArray(reviews) ? reviews.map(review => ({
                 ...review,
-                responses_count: Number(review.responses_count || 0)
+                responses_count: Number(review.responses_count || 0),
+                hearts_count: Number(review.hearts_count || 0),
+                is_author_review: Number(review.is_author_review || 0)
             })) : [];
 
             movie.reviews = normalizedReviews;
@@ -1148,152 +1295,218 @@ if (!empty($_SESSION['user']['id'])) {
         const container = document.getElementById('modalReviewsBody');
         if (!container) return;
         container.innerHTML = `
-            <div class="text-center py-16 opacity-75">
-                <p class="text-sm text-muted-foreground">Cargando reseñas...</p>
+            <div class="reviews-state">
+                <span class="reviews-state-kicker">Cargando</span>
+                <p>Buscando reseñas de esta película...</p>
             </div>
         `;
     }
 
-    // Render response reply form markup
+    async function refreshCurrentMovieReviews() {
+        if (!currentModalMovie) return;
+        renderReviewsLoading();
+        await loadMovieReviews(currentModalMovie, true);
+        renderReviewsList(currentModalMovie);
+    }
+
+    function scrollMovieSection(sectionId, direction) {
+        const row = document.getElementById(sectionId);
+        if (!row) return;
+        row.scrollBy({
+            left: direction * Math.max(280, row.clientWidth * 0.8),
+            behavior: 'smooth'
+        });
+    }
+
     function renderReplyForm(rev, movieId) {
         if (!currentUser) return '';
         if (currentUser.id === rev.user_id) {
             return `
-                <div class="rounded border border-secondary/20 bg-secondary/5 p-2.5 text-xs text-muted-foreground mt-3 text-center">
-                    ℹ️ No puedes responder tu propia reseña
+                <div class="review-note">
+                    No puedes responder tu propia reseña.
                 </div>
             `;
         }
 
         return `
-            <form method="post" class="space-y-3 rounded-lg border border-primary/10 bg-primary/5 p-4 mt-3">
+            <form method="post" class="review-reply-form">
                 <input type="hidden" name="action" value="respond_review">
                 <input type="hidden" name="review_id" value="${rev.id}">
                 <input type="hidden" name="movie_id" value="${movieId}">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="text-sm">💬</span>
-                    <label class="block text-[11px] font-bold text-primary uppercase tracking-wide">Responde esta reseña</label>
+                <div class="review-form-title">
+                    <span>Responder reseña</span>
+                    <small>Responde sin volver a calificar la película.</small>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase font-bold text-muted-foreground">Tu calificación:</label>
-                    <select name="rating" required class="rounded border border-border bg-background text-foreground text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none w-full">
-                        <option value="">-- Selecciona una calificación --</option>
-                        <option value="5">★★★★★ - 5 estrellas</option>
-                        <option value="4">★★★★☆ - 4 estrellas</option>
-                        <option value="3">★★★☆☆ - 3 estrellas</option>
-                        <option value="2">★★☆☆☆ - 2 estrellas</option>
-                        <option value="1">★☆☆☆☆ - 1 estrella</option>
-                    </select>
+                <div class="review-form-grid">
+                    <label>
+                        Respuesta
+                        <textarea name="comment" placeholder="Escribe una respuesta breve..." required rows="2"></textarea>
+                    </label>
                 </div>
-                <div class="space-y-1">
-                    <label class="block text-[10px] uppercase font-bold text-muted-foreground">Tu respuesta:</label>
-                    <textarea name="comment" placeholder="Comparte tu opinión..." required rows="2" class="w-full text-xs rounded border border-border bg-background px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
-                </div>
-                <button type="submit" class="w-full rounded bg-primary text-primary-foreground hover:bg-primary/90 py-1.5 text-xs font-bold transition-colors">
-                    ✓ Publicar respuesta
-                </button>
+                <button type="submit">Publicar respuesta</button>
             </form>
         `;
     }
 
-    // Render right column contents
+    function renderReviewSummary(movie, reviews) {
+        const count = reviews.length;
+        if (count === 0) {
+            return `
+                <section class="reviews-summary">
+                    <div>
+                        <span class="reviews-summary-kicker">Reseñas</span>
+                        <h3>Sin reseñas todavía</h3>
+                    </div>
+                    <p>Sé el primero en dejar una opinión clara sobre esta película.</p>
+                    <label class="review-sort-control">
+                        Orden
+                        <select id="reviewSortSelect" onchange="refreshCurrentMovieReviews()">
+                            <option value="recent">Más reciente</option>
+                            <option value="oldest">Más antiguo</option>
+                            <option value="rating">Mejor valoración</option>
+                        </select>
+                    </label>
+                </section>
+            `;
+        }
+
+        const average = reviews.reduce((total, review) => total + Number(review.rating || 0), 0) / count;
+        return `
+            <section class="reviews-summary">
+                <div>
+                    <span class="reviews-summary-kicker">Reseñas</span>
+                    <h3>${count} opinión${count === 1 ? '' : 'es'}</h3>
+                </div>
+                <div class="reviews-summary-score">
+                    <strong>${average.toFixed(1)}</strong>
+                    <span>${reviewStars(Math.round(average))}</span>
+                </div>
+                <label class="review-sort-control">
+                    Orden
+                    <select id="reviewSortSelect" onchange="refreshCurrentMovieReviews()">
+                        <option value="recent">Más reciente</option>
+                        <option value="oldest">Más antiguo</option>
+                        <option value="rating">Mejor valoración</option>
+                    </select>
+                </label>
+            </section>
+        `;
+    }
+
     function renderReviewsList(movie) {
         const container = document.getElementById('modalReviewsBody');
-        let htmlContent = '';
+        if (!container) return;
+
         const reviews = Array.isArray(movie.reviews) ? movie.reviews : [];
+        let htmlContent = renderReviewSummary(movie, reviews);
 
         if (reviews.length === 0) {
             htmlContent += `
-                <div class="text-center py-16 opacity-75">
-                    <span class="text-4xl">💬</span>
-                    <p class="mt-3 text-sm text-muted-foreground">Aún no hay reseñas para esta película.</p>
+                <div class="reviews-state reviews-state-empty">
+                    <span class="reviews-state-kicker">Aún no hay actividad</span>
+                    <p>Cuando alguien escriba una reseña, aparecerá aca con sus respuestas.</p>
                 </div>
             `;
         } else {
+            htmlContent += '<div class="reviews-list">';
             reviews.forEach(rev => {
-                const isAuthorReview = Number(movie.author_user_id) > 0 && Number(rev.user_id) === Number(movie.author_user_id);
+                const isAuthorReview = Number(rev.is_author_review || 0) === 1 || (Number(movie.author_user_id) > 0 && Number(rev.user_id) === Number(movie.author_user_id));
                 const authorBadge = isAuthorReview ? '<span class="review-author-badge">Autor</span>' : '';
                 htmlContent += `
-                    <div class="rounded-xl border border-border bg-background/30 p-4 mb-4 review-item transition-all duration-200">
-                        <div class="flex items-center justify-between gap-3">
-                            <div class="review-author-line">
-                                <span class="font-extrabold text-foreground text-sm">${escapeHtml(rev.user_name)}</span>
-                                ${authorBadge}
-                                <span class="text-yellow-400 text-xs ml-2">${'★'.repeat(rev.rating)}${'☆'.repeat(5 - rev.rating)}</span>
+                    <article class="review-card" id="review-${rev.id}">
+                        <header class="review-card-header">
+                            <div class="review-avatar">${userInitial(rev.user_name)}</div>
+                            <div class="review-card-title">
+                                <div class="review-author-line">
+                                    <strong>${escapeHtml(rev.user_name)}</strong>
+                                    ${authorBadge}
+                                </div>
+                                <span class="review-stars">${reviewStars(rev.rating)}</span>
                             </div>
-                        </div>
-                        <p class="text-muted-foreground text-xs leading-relaxed mt-2">${escapeHtml(rev.comment)}</p>
-                        
-                        <!-- Replies section toggle -->
-                        <div class="mt-3 flex items-center justify-between">
-                            <div class="toggle-replies-btn" id="toggle-replies-btn-${rev.id}" onclick="toggleReplies(${rev.id})">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                        </header>
+                        <p class="review-text">${escapeHtml(rev.comment)}</p>
+                        <div class="review-actions">
+                            <button type="button" class="review-heart-btn" id="review-heart-${rev.id}" onclick="toggleReviewHeart(${rev.id})" aria-label="Dar corazon">
+                                <span>♥</span>
+                                <strong id="review-heart-count-${rev.id}">${Number(rev.hearts_count || 0)}</strong>
+                            </button>
+                            <button type="button" class="toggle-replies-btn" id="toggle-replies-btn-${rev.id}" onclick="toggleReplies(${rev.id})">
+                                <span>Ver respuestas</span>
+                                <strong id="replies-count-${rev.id}">${Number(rev.responses_count || 0)}</strong>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
-                                <span>Respuestas (<span id="replies-count-${rev.id}">${Number(rev.responses_count || 0)}</span>)</span>
-                            </div>
+                            </button>
                         </div>
-                        
-                        <!-- Collapsible Replies Container -->
                         <div class="replies-container" id="replies-container-${rev.id}">
-                            <div class="border-t border-border mt-3 pt-3 space-y-3">
+                            <div class="replies-panel">
                                 <div id="responses-list-${rev.id}" data-loaded="0">
-                                    <p class="text-xs text-muted-foreground italic pl-4 opacity-75">Abre para cargar respuestas...</p>
+                                    <p class="review-reply-empty">Abre para cargar respuestas.</p>
                                 </div>
                                 ${renderReplyForm(rev, movie.id)}
                             </div>
                         </div>
-                    </div>
+                    </article>
                 `;
             });
+            htmlContent += '</div>';
         }
 
-        // Add Review Section at the bottom of the right column
         if (currentUser) {
-            // Check if user already reviewed this movie
-            const alreadyReviewed = reviews.some(rev => rev.user_id === currentUser.id);
+            const userReviewCount = reviews.filter(rev => Number(rev.user_id) === Number(currentUser.id)).length;
 
-            if (alreadyReviewed) {
+            if (userReviewCount >= 3) {
                 htmlContent += `
-                    <div class="mt-6 pt-4 border-t border-border text-center">
-                        <p class="text-xs text-muted-foreground bg-primary/5 border border-primary/10 rounded-lg py-3 px-4">
-                            ✨ Ya has reseñado esta película. ¡Gracias por tu opinión!
-                        </p>
+                    <div class="review-current-user-note disabled">
+                        Alcanzaste el máximo de 3 reseñas para esta película.
                     </div>
                 `;
             } else {
                 htmlContent += `
-                    <form method="post" class="mt-6 pt-6 border-t border-border space-y-3">
+                    <form method="post" class="review-submit-form">
                         <input type="hidden" name="action" value="submit_review">
                         <input type="hidden" name="movie_id" value="${movie.id}">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-bold text-muted-foreground uppercase">Calificación:</label>
-                            <select name="rating" class="rounded border border-border bg-background text-foreground text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none">
-                                <option value="5">★★★★★</option>
-                                <option value="4">★★★★☆</option>
-                                <option value="3">★★★☆☆</option>
-                                <option value="2">★★☆☆☆</option>
-                                <option value="1">★☆☆☆☆</option>
-                            </select>
+                        <div class="review-form-title">
+                            <span>Escribir reseña</span>
+                            <small>Tu calificación ayuda al resto a decidir.</small>
                         </div>
-                        <input type="text" name="comment" placeholder="Escribe tu reseña..." required class="w-full text-xs rounded border border-border bg-background px-3 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                        <button type="submit" class="w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 py-2.5 text-xs font-bold transition-colors">
-                            Publicar Reseña
-                        </button>
+                        <label>
+                            Calificación
+                            <select name="rating" required>
+                                <option value="5">&#9733;&#9733;&#9733;&#9733;&#9733; - Excelente</option>
+                                <option value="4">&#9733;&#9733;&#9733;&#9733;&#9734; - Muy buena</option>
+                                <option value="3">&#9733;&#9733;&#9733;&#9734;&#9734; - Correcta</option>
+                                <option value="2">&#9733;&#9733;&#9734;&#9734;&#9734; - Floja</option>
+                                <option value="1">&#9733;&#9734;&#9734;&#9734;&#9734; - Mala</option>
+                            </select>
+                        </label>
+                        <label>
+                            Reseña
+                            <textarea name="comment" placeholder="Conta que te parecio en una o dos frases..." required rows="3"></textarea>
+                        </label>
+                        <button type="submit">Publicar reseña</button>
                     </form>
                 `;
             }
         } else {
             htmlContent += `
-                <div class="mt-6 pt-4 border-t border-border text-center">
-                    <p class="text-xs text-muted-foreground">
-                        <a href="/proyecto7mo/Frontend/login.php" class="text-primary hover:underline font-bold">Inicia sesión</a> para calificar esta película.
-                    </p>
+                <div class="review-login-note">
+                    <a href="/proyecto7mo/Frontend/login.php">Inicia sesión</a> para calificar esta película.
                 </div>
             `;
         }
 
         container.innerHTML = htmlContent;
+
+        if (activeReviewId > 0) {
+            window.setTimeout(() => {
+                const targetReview = document.getElementById(`review-${activeReviewId}`);
+                if (!targetReview) return;
+                targetReview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetReview.classList.add('review-card-highlight');
+                window.setTimeout(() => targetReview.classList.remove('review-card-highlight'), 1800);
+            }, 120);
+        }
     }
 
     // Auto-open modal on load if activeMovieId is set

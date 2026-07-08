@@ -563,6 +563,27 @@ html[data-theme="light"] .settings-label {
     margin-bottom:8px;
 }
 
+.profile-flash {
+    width: min(520px, 100%);
+    margin: 0 auto 18px;
+    border-radius: 14px;
+    padding: 12px 16px;
+    text-align: center;
+    font-weight: 800;
+}
+
+.profile-flash-success {
+    border: 1px solid rgba(34, 197, 94, 0.38);
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+}
+
+.profile-flash-error {
+    border: 1px solid rgba(233, 69, 96, 0.46);
+    background: rgba(233, 69, 96, 0.12);
+    color: #ff8aa0;
+}
+
 .edit-name-btn{
     width:34px;
     height:34px;
@@ -899,14 +920,42 @@ html[data-theme="light"] .settings-label {
 }
 
 .activity-card {
-    min-height: 120px;
+    min-height: 132px;
     display: flex;
-    align-items: center;
-    padding: 24px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 22px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background:
+        linear-gradient(135deg, rgba(233, 69, 96, 0.12), rgba(255, 255, 255, 0.035)),
+        rgba(255, 255, 255, 0.04);
     color: var(--foreground);
+}
+
+.activity-card-link {
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.activity-card-link::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--primary);
+    opacity: 0.85;
+}
+
+.activity-card-link:hover {
+    border-color: rgba(233, 69, 96, 0.55);
+    background: rgba(233, 69, 96, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 34px -24px rgba(233, 69, 96, 0.75);
 }
 
 .activity-card p {
@@ -914,6 +963,32 @@ html[data-theme="light"] .settings-label {
     color: var(--muted-foreground);
     font-size: 1rem;
     line-height: 1.55;
+}
+
+.activity-type {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border-radius: 999px;
+    background: rgba(233, 69, 96, 0.16);
+    color: var(--primary);
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.activity-movie {
+    color: var(--foreground);
+    font-size: 1.08rem;
+    line-height: 1.25;
+}
+
+.activity-comment {
+    text-decoration: underline;
+    text-decoration-color: rgba(233, 69, 96, 0.7);
+    text-underline-offset: 4px;
 }
 
 .empty-state {
@@ -1373,7 +1448,7 @@ html[data-theme="light"] .privacy-option.active {
     text-align: center;
 }
 
-#saveProfileChanges{
+.save-profile-submit{
     height:52px;
 
     border:none;
@@ -1390,7 +1465,7 @@ html[data-theme="light"] .privacy-option.active {
     transition:all 0.25s ease;
 }
 
-#saveProfileChanges:hover{
+.save-profile-submit:hover{
     transform:translateY(-2px);
 
     box-shadow:

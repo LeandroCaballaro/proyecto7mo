@@ -9,7 +9,17 @@ CREATE TABLE IF NOT EXISTS movies (
   description TEXT,
   year INT,
   movie_author VARCHAR(255) NULL,
-  user_id INT NULL
+  external_source VARCHAR(50) NULL,
+  external_id VARCHAR(100) NULL,
+  poster_url VARCHAR(500) NULL,
+  approval_status VARCHAR(20) NOT NULL DEFAULT 'approved',
+  rejection_reason TEXT NULL,
+  user_id INT NULL,
+  KEY idx_movies_title (title),
+  KEY idx_movies_genre (genre),
+  KEY idx_movies_featured (featured),
+  KEY idx_movies_external (external_source, external_id),
+  KEY idx_movies_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -21,14 +31,17 @@ CREATE TABLE IF NOT EXISTS users (
   description VARCHAR(100) NULL,
   profile_image VARCHAR(255) NULL,
   is_public TINYINT(1) NOT NULL DEFAULT 1,
-  role VARCHAR(20) NOT NULL DEFAULT 'user'
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  KEY idx_users_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reviewers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,
   name VARCHAR(255) NOT NULL,
-  reputation INT DEFAULT 0
+  reputation INT DEFAULT 0,
+  KEY idx_reviewers_user_id (user_id),
+  KEY idx_reviewers_reputation (reputation)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reviews (
@@ -38,16 +51,30 @@ CREATE TABLE IF NOT EXISTS reviews (
   rating TINYINT NOT NULL,
   image_url VARCHAR(255) NULL,
   comment TEXT,
-  UNIQUE KEY uk_user_movie (user_id, movie_id)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_reviews_user_movie (user_id, movie_id),
+  KEY idx_reviews_movie_id (movie_id),
+  KEY idx_reviews_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS review_responses (
   id INT AUTO_INCREMENT PRIMARY KEY,
   review_id INT NOT NULL,
   user_id INT NOT NULL,
-  rating TINYINT NOT NULL,
+  rating TINYINT NULL,
   comment TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_review_responses_review_id (review_id),
+  KEY idx_review_responses_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS review_likes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  review_id INT NOT NULL,
+  user_id INT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_review_like (review_id, user_id),
+  KEY idx_review_likes_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS genre_reputation (
@@ -55,7 +82,8 @@ CREATE TABLE IF NOT EXISTS genre_reputation (
   user_id INT NOT NULL,
   genre VARCHAR(100) NOT NULL,
   points INT DEFAULT 0,
-  UNIQUE KEY uk_user_genre (user_id, genre)
+  UNIQUE KEY uk_user_genre (user_id, genre),
+  KEY idx_genre_reputation_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS favorite_movies (
@@ -70,7 +98,9 @@ CREATE TABLE IF NOT EXISTS api_tokens (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   token VARCHAR(64) NOT NULL UNIQUE,
-  expires_at DATETIME NOT NULL
+  expires_at DATETIME NOT NULL,
+  KEY idx_api_tokens_user_id (user_id),
+  KEY idx_api_tokens_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -79,25 +109,7 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   token VARCHAR(64) NOT NULL UNIQUE,
   expires_at DATETIME NOT NULL,
   used_at DATETIME NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_password_reset_tokens_user_id (user_id),
+  KEY idx_password_reset_tokens_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT INTO movies (id, title, genre, featured, description, year, movie_author) VALUES
-(1, 'El Gran Viaje', 'Aventura', 1, 'Una epica aventura entre mundos.', 2021, 'NexoHub'),
-(2, 'Amor en Paris', 'Romance', 0, 'Drama romantico en Paris.', 2019, 'NexoHub'),
-(3, 'Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022, 'NexoHub')
-ON DUPLICATE KEY UPDATE
-title = VALUES(title),
-genre = VALUES(genre),
-featured = VALUES(featured),
-description = VALUES(description),
-year = VALUES(year),
-movie_author = VALUES(movie_author);
-
-INSERT INTO reviewers (id, user_id, name, reputation) VALUES
-(1, NULL, 'Carlos Perez', 120),
-(2, NULL, 'Ana Gomez', 95)
-ON DUPLICATE KEY UPDATE
-user_id = VALUES(user_id),
-name = VALUES(name),
-reputation = VALUES(reputation);

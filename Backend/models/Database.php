@@ -37,15 +37,27 @@ class Database
             description TEXT,
             year INT,
             movie_author VARCHAR(255) NULL,
+            external_source VARCHAR(50) NULL,
+            external_id VARCHAR(100) NULL,
+            poster_url VARCHAR(500) NULL,
+            approval_status VARCHAR(20) NOT NULL DEFAULT 'approved',
+            rejection_reason TEXT NULL,
             user_id INT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-        $movieAuthorColumn = $this->pdo->query("SHOW COLUMNS FROM movies LIKE 'movie_author'")->fetch(PDO::FETCH_ASSOC);
-        if (!$movieAuthorColumn) {
-            $this->pdo->exec("ALTER TABLE movies ADD COLUMN movie_author VARCHAR(255) NULL AFTER year");
-        }
-        $movieUserColumn = $this->pdo->query("SHOW COLUMNS FROM movies LIKE 'user_id'")->fetch(PDO::FETCH_ASSOC);
-        if (!$movieUserColumn) {
-            $this->pdo->exec("ALTER TABLE movies ADD COLUMN user_id INT NULL");
+        $movieColumns = [
+            'movie_author' => "ALTER TABLE movies ADD COLUMN movie_author VARCHAR(255) NULL AFTER year",
+            'external_source' => "ALTER TABLE movies ADD COLUMN external_source VARCHAR(50) NULL AFTER movie_author",
+            'external_id' => "ALTER TABLE movies ADD COLUMN external_id VARCHAR(100) NULL AFTER external_source",
+            'poster_url' => "ALTER TABLE movies ADD COLUMN poster_url VARCHAR(500) NULL AFTER external_id",
+            'approval_status' => "ALTER TABLE movies ADD COLUMN approval_status VARCHAR(20) NOT NULL DEFAULT 'approved' AFTER poster_url",
+            'rejection_reason' => "ALTER TABLE movies ADD COLUMN rejection_reason TEXT NULL AFTER approval_status",
+            'user_id' => "ALTER TABLE movies ADD COLUMN user_id INT NULL AFTER rejection_reason",
+        ];
+        foreach ($movieColumns as $column => $sql) {
+            $exists = $this->pdo->query("SHOW COLUMNS FROM movies LIKE " . $this->pdo->quote($column))->fetch(PDO::FETCH_ASSOC);
+            if (!$exists) {
+                $this->pdo->exec($sql);
+            }
         }
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS users (
@@ -96,11 +108,20 @@ class Database
             rating TINYINT NOT NULL,
             image_url VARCHAR(255) NULL,
             comment TEXT,
-            UNIQUE KEY uk_user_movie (user_id, movie_id)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_reviews_user_movie (user_id, movie_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $reviewImageColumn = $this->pdo->query("SHOW COLUMNS FROM reviews LIKE 'image_url'")->fetch(PDO::FETCH_ASSOC);
         if (!$reviewImageColumn) {
             $this->pdo->exec("ALTER TABLE reviews ADD COLUMN image_url VARCHAR(255) NULL AFTER rating");
+        }
+        $reviewCreatedColumn = $this->pdo->query("SHOW COLUMNS FROM reviews LIKE 'created_at'")->fetch(PDO::FETCH_ASSOC);
+        if (!$reviewCreatedColumn) {
+            $this->pdo->exec("ALTER TABLE reviews ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP AFTER comment");
+        }
+        $reviewUnique = $this->pdo->query("SHOW INDEX FROM reviews WHERE Key_name = 'uk_user_movie'")->fetch(PDO::FETCH_ASSOC);
+        if ($reviewUnique) {
+            $this->pdo->exec("ALTER TABLE reviews DROP INDEX uk_user_movie");
         }
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS favorite_movies (
@@ -115,9 +136,22 @@ class Database
             id INT AUTO_INCREMENT PRIMARY KEY,
             review_id INT NOT NULL,
             user_id INT NOT NULL,
-            rating TINYINT NOT NULL,
+            rating TINYINT NULL,
             comment TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $responseRatingColumn = $this->pdo->query("SHOW COLUMNS FROM review_responses LIKE 'rating'")->fetch(PDO::FETCH_ASSOC);
+        if ($responseRatingColumn && strtoupper((string) ($responseRatingColumn['Null'] ?? '')) === 'NO') {
+            $this->pdo->exec("ALTER TABLE review_responses MODIFY rating TINYINT NULL");
+        }
+
+        $this->pdo->exec("CREATE TABLE IF NOT EXISTS review_likes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            review_id INT NOT NULL,
+            user_id INT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_review_like (review_id, user_id),
+            KEY idx_review_likes_user_id (user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS genre_reputation (
@@ -135,18 +169,11 @@ class Database
             expires_at DATETIME NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        if ((int) $this->pdo->query("SELECT COUNT(*) FROM movies")->fetchColumn() === 0) {
-            $s = $this->pdo->prepare("INSERT INTO movies (title, genre, featured, description, year, movie_author) VALUES (?, ?, ?, ?, ?, ?)");
-            $s->execute(['El Gran Viaje', 'Aventura', 1, 'Una épica aventura entre mundos.', 2021, 'NexoHub']);
-            $s->execute(['Amor en París', 'Romance', 0, 'Drama romántico en París.', 2019, 'NexoHub']);
-            $s->execute(['Risa Mortal', 'Comedia', 1, 'Comedia negra sobre la fama.', 2022, 'NexoHub']);
-        }
-
         if ((int) $this->pdo->query("SELECT COUNT(*) FROM reviewers")->fetchColumn() === 0) {
             $s = $this->pdo->prepare("INSERT INTO reviewers (user_id, name, reputation) VALUES (NULL, ?, ?)");
-            $s->execute(['Carlos Pérez', 120]);
-            $s->execute(['Ana Gómez', 95]);
-            $s->execute(['María López', 80]);
+            $s->execute(['Carlos Perez', 120]);
+            $s->execute(['Ana Gomez', 95]);
+            $s->execute(['Maria Lopez', 80]);
         }
 
         if ((int) $this->pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn() === 0) {

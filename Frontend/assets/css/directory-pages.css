@@ -1,0 +1,182 @@
+.directory-page {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 46px 0 64px;
+}
+
+.directory-hero {
+    margin-bottom: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(233, 69, 96, 0.16), rgba(20, 32, 58, 0.82));
+    padding: clamp(26px, 5vw, 46px);
+}
+
+.directory-kicker {
+    display: inline-flex;
+    width: fit-content;
+    border-radius: 999px;
+    background: rgba(233, 69, 96, 0.18);
+    color: var(--primary);
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.directory-hero h1 {
+    margin: 12px 0 10px;
+    color: var(--foreground);
+    font-size: clamp(2.1rem, 5vw, 4rem);
+    font-weight: 900;
+}
+
+.directory-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: 1.05rem;
+    line-height: 1.65;
+}
+
+.genre-directory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+}
+
+.genre-directory-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.045);
+    padding: 18px;
+    color: var(--foreground);
+    text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.genre-directory-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(233, 69, 96, 0.56);
+    background: rgba(233, 69, 96, 0.1);
+}
+
+.genre-directory-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(233, 69, 96, 0.18);
+    color: var(--primary);
+    font-weight: 900;
+}
+
+.genre-directory-card h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    font-weight: 900;
+}
+
+.genre-directory-card p {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+}
+
+.genre-directory-card strong {
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+.directory-empty,
+.approval-empty {
+    grid-column: 1 / -1;
+    border: 1px dashed rgba(255, 255, 255, 0.16);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 28px;
+    color: var(--muted-foreground);
+}
+
+.approval-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 18px;
+}
+
+.approval-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    background: rgba(17, 24, 45, 0.9);
+    padding: 20px;
+}
+
+.approval-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted-foreground);
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.approval-card label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #d8d8d8;
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.approval-card input,
+.approval-card select,
+.approval-card textarea {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(7, 11, 22, 0.72);
+    color: #ffffff;
+    padding: 11px 12px;
+}
+
+.approval-card textarea {
+    min-height: 116px;
+    resize: vertical;
+}
+
+.approval-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.approval-actions button {
+    border: 0;
+    border-radius: 12px;
+    background: var(--primary);
+    color: #ffffff;
+    padding: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+@media (max-width: 720px) {
+    .genre-directory-card {
+        grid-template-columns: auto 1fr;
+    }
+
+    .genre-directory-card strong {
+        grid-column: 2;
+    }
+}

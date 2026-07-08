@@ -1,87 +1,100 @@
 # NexoHub - Proyecto 7mo
 
-Plataforma de resenas de peliculas con sistema de reputacion por genero. El proyecto separa el frontend PHP de la API backend y deja los scripts SQL dentro del backend.
+NexoHub es una plataforma PHP para explorar peliculas, escribir resenas, responder comentarios, marcar favoritas y administrar usuarios/peliculas desde un panel interno.
 
-## Tecnologias
+## Requisitos
 
-| Area | Tecnologia |
-|------|------------|
-| Servidor local | Laragon, Apache/Nginx, PHP y MySQL/MariaDB |
-| Backend | PHP 8.x, PDO, MVC ligero |
-| Frontend | PHP, HTML, CSS y Tailwind CSS via CDN |
-| Base de datos | MySQL/MariaDB |
+- Laragon o stack equivalente con Apache/Nginx, PHP 8.x y MySQL/MariaDB.
+- Extension PDO MySQL habilitada.
+- Acceso a internet solo para ejecutar el seed de peliculas desde API.
 
-## Estructura
+## Estructura Principal
 
 ```text
 proyecto7mo/
 ├── Backend/
-│   ├── config/
-│   ├── controllers/
-│   ├── database/
-│   │   ├── import.sql
-│   │   ├── seeds/
-│   │   │   └── 001_demo_data.sql
-│   │   └── README.md
-│   ├── models/
-│   ├── public/
-│   │   └── api.php
-│   └── services/
+│   ├── config/          Configuracion de BD y variables .env
+│   ├── controllers/     Controladores HTTP de la API
+│   ├── database/        Schema y seeds
+│   ├── models/          Acceso a datos
+│   ├── public/          Entrada API: api.php
+│   └── services/        Logica de autenticacion y peliculas
 ├── Frontend/
-│   ├── public/
-│   │   ├── covers/
-│   │   ├── backgroung.jpg
-│   │   ├── NexoHub Logo.png
-│   │   └── nhlogo.png
-│   ├── style/
-│   └── *.php
-├── index.php
-└── README.md
+│   ├── api/             Endpoints auxiliares usados por vistas
+│   ├── assets/css/      Estilos
+│   ├── components/      Header, footer y secciones reutilizables
+│   ├── public/          Imagenes publicas y posters
+│   ├── uploads/         Fotos de perfil subidas localmente
+│   └── *.php            Paginas visibles
+└── index.php            Entrada publica principal
 ```
 
-## Configuracion local
+## Configuracion Local
 
-1. Clona el proyecto dentro de `C:\laragon\www\`.
-2. Inicia Laragon con **Start All**.
-3. Crea la base de datos `proyecto7mo`.
-4. Importa `Backend/database/import.sql`.
-5. Opcionalmente importa `Backend/database/seeds/001_demo_data.sql` para datos de prueba.
+1. Colocar el proyecto en `C:\laragon\www\proyecto7mo`.
+2. Iniciar Laragon.
+3. Crear la base `proyecto7mo`.
+4. Importar el schema:
 
-Si no importas el SQL, `Backend/models/Database.php` crea las tablas principales al primer uso.
-
-## Seeds
-
-El archivo `Backend/database/seeds/001_demo_data.sql` carga usuarios, peliculas, reviewers, resenas, respuestas, reputacion por genero y favoritos.
-
-Todos los usuarios seed usan la contrasena:
-
-```text
-password
+```powershell
+mysql -u root proyecto7mo < Backend/database/001_schema.sql
 ```
 
-Usuarios incluidos:
+5. Cargar usuarios demo:
 
-- `admin@nexohub.local` con rol `admin`.
-- `carlos@nexohub.local`.
-- `ana@nexohub.local`.
-- `maria@nexohub.local`.
-
-## API
-
-```text
-GET http://localhost/proyecto7mo/Backend/public/api.php
-GET http://localhost/proyecto7mo/Backend/public/api.php?route=movies
-GET http://localhost/proyecto7mo/Backend/public/api.php?route=movies/featured
-GET http://localhost/proyecto7mo/Backend/public/api.php?route=movies/genres
-GET http://localhost/proyecto7mo/Backend/public/api.php?route=movies/genre/Aventura
+```powershell
+mysql -u root proyecto7mo < Backend/database/002_seed_users.sql
 ```
 
-## Frontend
+6. Cargar peliculas reales desde API y luego comentarios demo:
 
-La entrada principal es:
+```powershell
+php Backend/database/003_seed_movies_from_api.php
+php Backend/database/004_seed_reviews_for_api_movies.php
+```
+
+Entrada web:
 
 ```text
 http://localhost/proyecto7mo/index.php
 ```
 
-Los assets estaticos quedaron en `Frontend/public`.
+## Usuarios Demo
+
+Todos usan contrasena:
+
+```text
+password
+```
+
+- `admin` o `admin@nexohub.local`: administrador normal.
+- `superadmin` o `superadmin@nexohub.local`: puede gestionar cuentas administradoras.
+- `carlosp`, `anagomez`, `marial`: usuarios normales.
+
+El login acepta correo o nombre de usuario.
+
+## API Interna
+
+Entrada:
+
+```text
+http://localhost/proyecto7mo/Backend/public/api.php
+```
+
+Rutas utiles:
+
+```text
+GET  ?route=movies
+GET  ?route=movies/featured
+GET  ?route=movies/genres
+GET  ?route=movies/genre/{genero}
+GET  ?route=movies/{id}
+POST ?route=auth/login
+POST ?route=auth/register
+POST ?route=reviews
+POST ?route=reviews/{id}/responses
+```
+
+## Notas De Almacenamiento
+
+Actualmente las fotos de perfil se guardan en `Frontend/uploads` y la BD guarda la URL publica. Para produccion conviene moverlas fuera del repositorio o a un storage externo. Ver [Backend/README.md](Backend/README.md) para opciones.

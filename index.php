@@ -24,21 +24,20 @@ if (isset($_GET['logout'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexoHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="Frontend/style/styles.css" rel="stylesheet">
+    <link href="Frontend/assets/css/styles.css" rel="stylesheet">
     <link rel="icon" href="Frontend/public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-    <?php include 'Frontend/header.php'; ?>
+    <?php include 'Frontend/components/header.php'; ?>
 
     <main class="flex-1">
-        <?php include 'Frontend/hero-section.php'; ?>
-        <?php include 'Frontend/features-section.php'; ?>
-        <?php include 'Frontend/genres-section.php'; ?>
-        <?php include 'Frontend/featured-movies-section.php'; ?>
-        <?php include 'Frontend/top-reviewers-section.php'; ?>
-        <?php include 'Frontend/cta-section.php'; ?>
+        <?php include 'Frontend/components/hero-section.php'; ?>
+        <?php include 'Frontend/components/features-section.php'; ?>
+        <?php include 'Frontend/components/genres-section.php'; ?>
+        <?php include 'Frontend/components/featured-movies-section.php'; ?>
+        <?php include 'Frontend/components/cta-section.php'; ?>
     </main>
     
-    <?php include 'Frontend/footer.php'; ?>
+    <?php include 'Frontend/components/footer.php'; ?>
 </body>
 </html>

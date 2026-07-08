@@ -21,7 +21,7 @@ function profile_image_url(?string $path): ?string
     return '/proyecto7mo/' . ltrim($path, '/');
 }
 
-require_once __DIR__ . '/../Backend/models/Database.php';
+require_once __DIR__ . '/../../Backend/models/Database.php';
 
 if ($user && isset($user['id'])) {
 
@@ -47,6 +47,9 @@ $userPhoto = profile_image_url($userPhoto);
 $uri = $_SERVER['REQUEST_URI'] ?? '';
 $is_home = (strpos($uri, 'index.php') !== false || $uri === '/proyecto7mo/' || $uri === '/proyecto7mo' || substr($uri, -1) === '/');
 $is_explorar = (strpos($uri, 'explorar.php') !== false);
+$is_ranking = (strpos($uri, 'ranking.php') !== false);
+$is_generos = (strpos($uri, 'generos.php') !== false);
+$is_approval = (strpos($uri, 'approve_movies.php') !== false);
 ?>
 <header class="sticky top-0 z-50 w-full border-b border-border header-glass transition-all duration-300">
     <div class="container mx-auto flex h-16 items-center justify-between px-4">
@@ -66,10 +69,11 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
         <nav class="hidden items-center gap-8 md:flex">
             <a href="/proyecto7mo/index.php" class="text-sm font-semibold nav-link <?= $is_home ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Inicio</a>
             <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-semibold nav-link <?= $is_explorar ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Explorar</a>
-            <a href="/proyecto7mo/index.php#generos" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Géneros</a>
-            <a href="/proyecto7mo/index.php#ranking" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Ranking</a>
-            <?php if (($user['role'] ?? '') === 'admin'): ?>
-                <a href="/proyecto7mo/Frontend/admin.php" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Administracion</a>
+            <a href="/proyecto7mo/Frontend/generos.php" class="text-sm font-semibold nav-link <?= $is_generos ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Géneros</a>
+            <a href="/proyecto7mo/Frontend/ranking.php" class="text-sm font-semibold nav-link <?= $is_ranking ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Ranking</a>
+            <?php if (in_array($user['role'] ?? '', ['admin', 'superadmin'], true)): ?>
+                <a href="/proyecto7mo/Frontend/admin.php" class="text-sm font-semibold nav-link text-muted-foreground hover:text-primary">Administración</a>
+                <a href="/proyecto7mo/Frontend/approve_movies.php" class="text-sm font-semibold nav-link <?= $is_approval ? 'text-primary active' : 'text-muted-foreground hover:text-primary' ?>">Aprobar Películas</a>
             <?php endif; ?>
         </nav>
 
@@ -118,8 +122,8 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
         <nav class="container mx-auto flex flex-col gap-4 px-4 py-6">
             <a href="/proyecto7mo/index.php" class="text-sm font-semibold <?= $is_home ? 'text-primary' : 'text-muted-foreground' ?> hover:text-primary transition-colors duration-200">Inicio</a>
             <a href="/proyecto7mo/Frontend/explorar.php" class="text-sm font-semibold <?= $is_explorar ? 'text-primary' : 'text-muted-foreground' ?> hover:text-primary transition-colors duration-200">Explorar</a>
-            <a href="/proyecto7mo/index.php#generos" class="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors duration-200">Géneros</a>
-            <a href="/proyecto7mo/index.php#ranking" class="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors duration-200">Ranking</a>
+            <a href="/proyecto7mo/Frontend/generos.php" class="text-sm font-semibold <?= $is_generos ? 'text-primary' : 'text-muted-foreground' ?> hover:text-primary transition-colors duration-200">Géneros</a>
+            <a href="/proyecto7mo/Frontend/ranking.php" class="text-sm font-semibold <?= $is_ranking ? 'text-primary' : 'text-muted-foreground' ?> hover:text-primary transition-colors duration-200">Ranking</a>
             <a href="/proyecto7mo/Frontend/explorar.php?focus=search" class="text-left text-sm font-semibold text-muted-foreground hover:text-primary transition-colors duration-200 flex items-center gap-2">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -145,8 +149,9 @@ $is_explorar = (strpos($uri, 'explorar.php') !== false);
                             </span>
                             <span class="text-sm text-muted-foreground">Mi perfil</span>
                         </a>
-                        <?php if (($user['role'] ?? '') === 'admin'): ?>
-                            <a href="/proyecto7mo/Frontend/admin.php" class="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors duration-200">Administracion</a>
+                        <?php if (in_array($user['role'] ?? '', ['admin', 'superadmin'], true)): ?>
+                            <a href="/proyecto7mo/Frontend/admin.php" class="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors duration-200">Administración</a>
+                            <a href="/proyecto7mo/Frontend/approve_movies.php" class="text-sm font-semibold <?= $is_approval ? 'text-primary' : 'text-muted-foreground' ?> hover:text-primary transition-colors duration-200">Aprobar Películas</a>
                         <?php endif; ?>
                         <a href="/proyecto7mo/index.php?logout=1" class="text-center border border-border text-foreground hover:bg-secondary hover:text-primary px-4 py-2 rounded-lg font-semibold transition-all duration-200">Salir</a>
                     </div>

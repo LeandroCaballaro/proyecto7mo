@@ -72,12 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrate Gratis - NexoHub</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style/sing_up.css">
-  <link rel="stylesheet" href="style/styles.css">
+  <link rel="stylesheet" href="assets/css/sing_up.css">
+  <link rel="stylesheet" href="assets/css/styles.css">
   <link rel="icon" href="public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-  <?php include 'header.php'; ?>
+  <?php include 'components/header.php'; ?>
 
   <main class="flex-1 flex items-center justify-center py-12 px-4">
     <div class="signup-container">

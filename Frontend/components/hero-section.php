@@ -26,15 +26,15 @@
                 </p>
 
                 <div class="flex flex-col gap-4 sm:flex-row">
-                    <button class="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-lg text-lg font-medium flex items-center gap-2">
+                    <a href="/proyecto7mo/Frontend/explorar.php" class="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-lg text-lg font-medium flex items-center gap-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.586a1 1 0 01.707.293l.707.707A1 1 0 0012.414 11H13m-3 3a1 1 0 100-2 1 1 0 000 2z"></path>
                         </svg>
                         Comenzar Ahora
-                    </button>
-                    <button class="border border-border text-foreground hover:bg-secondary px-6 py-3 rounded-lg text-lg font-medium">
-                        Explorar Películas
-                    </button>
+                    </a>
+                    <a href="/proyecto7mo/Frontend/ranking.php" class="border border-border text-foreground hover:bg-secondary px-6 py-3 rounded-lg text-lg font-medium">
+                        Ver Ranking
+                    </a>
                 </div>
 
                 <!-- Stats -->

@@ -2,6 +2,15 @@
 session_start();
 // Si no está autenticado, redirigir al login
 if (empty($_SESSION['user'])) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Tu sesión expiró. Iniciá sesión nuevamente.',
+            'redirect' => '/proyecto7mo/Frontend/login.php',
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
     header('Location: /proyecto7mo/Frontend/login.php');
     exit;
 }
@@ -12,6 +21,7 @@ $user_name = $_SESSION['user']['name'];
 $user_username = $_SESSION['user']['username'] ?? '';
 $user_email = $_SESSION['user']['email'];
 $user_id = $_SESSION['user']['id'] ?? null;
+$user_role = $_SESSION['user']['role'] ?? 'user';
 
 $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
 $user_description = '';
@@ -23,6 +33,16 @@ $reputation = 0;
 $comments_count = 0;
 $user_reviews = [];
 $user_favorites = [];
+$user_activity = [];
+$profileFlashMessage = '';
+$profileFlashType = '';
+if (isset($_GET['profile_updated'])) {
+    $profileFlashMessage = 'Perfil actualizado correctamente.';
+    $profileFlashType = 'success';
+} elseif (isset($_GET['profile_error'])) {
+    $profileFlashMessage = trim((string) $_GET['profile_error']);
+    $profileFlashType = 'error';
+}
 
 function ensure_favorites_table(PDO $db): void
 {
@@ -66,7 +86,7 @@ if ($user_id) {
     try {
         $db = Database::getInstance()->getConnection();
 
-        $stmt = $db->prepare("SELECT name, username, email, description, profile_image, is_public FROM users WHERE id = ? LIMIT 1");
+        $stmt = $db->prepare("SELECT name, username, email, description, profile_image, is_public, role FROM users WHERE id = ? LIMIT 1");
         $stmt->execute([$user_id]);
         $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($userRow) {
@@ -76,21 +96,29 @@ if ($user_id) {
             $user_description = $userRow['description'] ?? '';
             $userProfileImage = $userRow['profile_image'] ?? '';
             $profile_is_public = isset($userRow['is_public']) ? (int) $userRow['is_public'] : 1;
+            $user_role = $userRow['role'] ?? $user_role;
             $user_initial = mb_strtoupper(mb_substr($user_name, 0, 1, 'UTF-8'));
             $_SESSION['user']['name'] = $user_name;
             $_SESSION['user']['username'] = $user_username;
             $_SESSION['user']['email'] = $user_email;
             $_SESSION['user']['profile_image'] = $userProfileImage;
             $_SESSION['user']['is_public'] = $profile_is_public;
+            $_SESSION['user']['role'] = $user_role;
         }
 
         // Cargar reputación real
-        $stmt = $db->prepare("SELECT reputation FROM reviewers WHERE user_id = ? LIMIT 1");
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(category_points), 0) FROM (
+                SELECT FLOOR(COUNT(rl.id) / 10) AS category_points
+                FROM review_likes rl
+                JOIN reviews r ON r.id = rl.review_id
+                JOIN movies m ON m.id = r.movie_id
+                WHERE r.user_id = ?
+                GROUP BY m.genre
+            ) reputation_by_genre
+        ");
         $stmt->execute([$user_id]);
-        $reviewer = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($reviewer) {
-            $reputation = (int) $reviewer['reputation'];
-        }
+        $reputation = (int) $stmt->fetchColumn();
         
         // Contar reseñas hechas
         $stmt = $db->prepare("SELECT COUNT(*) FROM reviews WHERE user_id = ?");
@@ -107,15 +135,32 @@ if ($user_id) {
         $comments_count = $reviews_count + $responses_count;
         // Obtener reseñas del usuario
 $stmt = $db->prepare("
-SELECT reviews.comment, movies.id AS movie_id, movies.title
+    SELECT reviews.comment, reviews.rating, reviews.created_at, movies.id AS movie_id, movies.title
     FROM reviews
     INNER JOIN movies ON reviews.movie_id = movies.id
     WHERE reviews.user_id = ?
-    ORDER BY reviews.id DESC
+    ORDER BY reviews.created_at DESC, reviews.id DESC
 ");
 $stmt->execute([$user_id]);
 
 $user_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $db->prepare("
+    SELECT 'review' AS type, r.id AS review_id, r.comment, r.created_at, m.id AS movie_id, m.title AS movie_title
+    FROM reviews r
+    INNER JOIN movies m ON m.id = r.movie_id
+    WHERE r.user_id = ?
+    UNION ALL
+    SELECT 'response' AS type, r.id AS review_id, rr.comment, rr.created_at, m.id AS movie_id, m.title AS movie_title
+    FROM review_responses rr
+    INNER JOIN reviews r ON r.id = rr.review_id
+    INNER JOIN movies m ON m.id = r.movie_id
+    WHERE rr.user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 20
+");
+$stmt->execute([$user_id, $user_id]);
+$user_activity = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ensure_favorites_table($db);
 $stmt = $db->prepare("
@@ -123,7 +168,7 @@ $stmt = $db->prepare("
     FROM favorite_movies
     INNER JOIN movies ON favorite_movies.movie_id = movies.id
     WHERE favorite_movies.user_id = ?
-    ORDER BY movies.title ASC
+    ORDER BY favorite_movies.created_at DESC, movies.title ASC
 ");
 $stmt->execute([$user_id]);
 $user_favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -134,9 +179,19 @@ $user_favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    header('Content-Type: application/json');
+    header('Content-Type: application/json; charset=utf-8');
+    $sendJson = static function (array $payload): void {
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    };
 
     $user_id = $_SESSION['user']['id'] ?? null;
+    if (!$user_id) {
+        $sendJson([
+            'success' => false,
+            'message' => 'Tu sesión expiró. Iniciá sesión nuevamente.'
+        ]);
+    }
 
     require_once __DIR__ . '/../Backend/models/Database.php';
 
@@ -160,64 +215,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     // PERFIL
     if ($_POST['action'] === 'update_profile') {
-        $name = trim($_POST['name'] ?? '');
-        $username = trim($_POST['username'] ?? '');
+        try {
+            $name = trim($_POST['name'] ?? '');
+            $username = trim($_POST['username'] ?? '');
 
-        if (!preg_match('/^[\p{L}\p{N} ]{1,40}$/u', $name)) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'El nombre no puede tener caracteres especiales ni superar los 40 caracteres'
+            if (!preg_match('/^[\p{L}\p{N} ]{1,40}$/u', $name)) {
+                $sendJson([
+                    'success' => false,
+                    'message' => 'El nombre no puede tener caracteres especiales ni superar los 40 caracteres'
+                ]);
+            }
+
+            if (!preg_match('/^[A-Za-z0-9]{1,20}$/', $username)) {
+                $sendJson([
+                    'success' => false,
+                    'message' => 'El nombre de usuario solo puede tener letras y números, hasta 20 caracteres'
+                ]);
+            }
+
+            $stmt = $db->prepare("
+                SELECT id
+                FROM users
+                WHERE username = ? AND id <> ?
+                LIMIT 1
+            ");
+            $stmt->execute([$username, $user_id]);
+
+            if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+                $sendJson([
+                    'success' => false,
+                    'message' => 'El nombre de usuario ya está en uso'
+                ]);
+            }
+
+            $stmt = $db->prepare("
+                UPDATE users
+                SET name = ?, username = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$name, $username, $user_id]);
+
+            $stmt = $db->prepare("
+                UPDATE reviewers
+                SET name = ?
+                WHERE user_id = ?
+            ");
+            $stmt->execute([$name, $user_id]);
+
+            $_SESSION['user']['name'] = $name;
+            $_SESSION['user']['username'] = $username;
+
+            $sendJson([
+                'success' => true,
+                'name' => $name,
+                'username' => $username
             ]);
-            exit;
-        }
-
-        if (!preg_match('/^[A-Za-z0-9]{1,20}$/', $username)) {
-            echo json_encode([
+        } catch (Throwable $e) {
+            $sendJson([
                 'success' => false,
-                'message' => 'El nombre de usuario solo puede tener letras y numeros, hasta 20 caracteres'
+                'message' => 'No se pudo actualizar el perfil. Intentá de nuevo.'
             ]);
-            exit;
         }
-
-        $stmt = $db->prepare("
-            SELECT id
-            FROM users
-            WHERE username = ? AND id <> ?
-            LIMIT 1
-        ");
-        $stmt->execute([$username, $user_id]);
-
-        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'El nombre de usuario ya esta en uso'
-            ]);
-            exit;
-        }
-
-        $stmt = $db->prepare("
-            UPDATE users
-            SET name = ?, username = ?
-            WHERE id = ?
-        ");
-        $stmt->execute([$name, $username, $user_id]);
-
-        $stmt = $db->prepare("
-            UPDATE reviewers
-            SET name = ?
-            WHERE user_id = ?
-        ");
-        $stmt->execute([$name, $user_id]);
-
-        $_SESSION['user']['name'] = $name;
-        $_SESSION['user']['username'] = $username;
-
-        echo json_encode([
-            'success' => true,
-            'name' => $name,
-            'username' => $username
-        ]);
-        exit;
     }
 
     // FOTO
@@ -311,9 +369,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     if ($_POST['action'] === 'delete_account') {
-        $stmt = $db->prepare("SELECT profile_image FROM users WHERE id = ?");
+        $stmt = $db->prepare("SELECT profile_image, role FROM users WHERE id = ?");
         $stmt->execute([$user_id]);
-        $currentImage = $stmt->fetchColumn();
+        $accountRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        $currentImage = $accountRow['profile_image'] ?? null;
+        $accountRole = $accountRow['role'] ?? 'user';
+
+        if (in_array($accountRole, ['admin', 'superadmin'], true)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Las cuentas administradoras solo pueden ser eliminadas por un superadmin desde administracion.'
+            ]);
+            exit;
+        }
 
         try {
             $db->beginTransaction();
@@ -359,8 +427,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Cuenta - NexoHub</title>
-    <link rel="stylesheet" href="style/styles.css">
-    <link rel="stylesheet" href="style/user.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/user.css">
 </head>
 <body class="perfil-body">
     <!-- Contenedor Principal Split-Screen -->
@@ -459,7 +527,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             <!-- Contenedor central de información de perfil -->
             <section id="perfil" class="perfil-seccion-central content-section">
-                
+                <?php if ($profileFlashMessage !== ''): ?>
+                    <div class="profile-flash profile-flash-<?= htmlspecialchars($profileFlashType) ?>">
+                        <?= htmlspecialchars($profileFlashMessage) ?>
+                    </div>
+                <?php endif; ?>
+
                 <!-- Avatar de usuario grande con botón de foto flotante -->
                 <div class="avatar-grande-container">
                     <div
@@ -595,6 +668,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                         <div class="movie-overlay">
                             <h3><?= htmlspecialchars($review['title']) ?></h3>
+                            <p><?= str_repeat('★', (int) $review['rating']) ?><?= str_repeat('☆', 5 - (int) $review['rating']) ?></p>
+                            <small><?= htmlspecialchars($review['comment']) ?></small>
                         </div>
 
                     </div>
@@ -655,15 +730,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         <p class="section-description">Revisa tu actividad reciente en NexoHub.</p>
                     </div>
 <div class="activity-list">
-
-    <div class="activity-card">
-        <p>Has realizado <?= $comments_count?> comentarios.</p>
-    </div>
-
-    <div class="activity-card">
-        <p>Tu reputación actual es de <?= $reputation ?> puntos.</p>
-    </div>
-
+    <?php if (!empty($user_activity)): ?>
+        <?php foreach ($user_activity as $activity): ?>
+            <a class="activity-card activity-card-link" href="/proyecto7mo/Frontend/explorar.php?movie_id=<?= (int) $activity['movie_id'] ?>&review_id=<?= (int) $activity['review_id'] ?>">
+                <span class="activity-type"><?= $activity['type'] === 'review' ? 'Reseña' : 'Comentario' ?></span>
+                <strong class="activity-movie"><?= htmlspecialchars($activity['movie_title']) ?></strong>
+                <p class="activity-comment"><?= htmlspecialchars($activity['comment']) ?></p>
+            </a>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="activity-card">
+            <p>Todavía no hay actividad para mostrar.</p>
+        </div>
+    <?php endif; ?>
 </div>
                 </div>
             </section>
@@ -715,7 +794,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <span class="settings-label">Eliminar cuenta</span>
                                 <p class="settings-note">Borra tu perfil, reseñas, respuestas, favoritos y reputación.</p>
                             </div>
-                            <button type="button" class="danger-action-btn" id="deleteAccountBtn">Eliminar cuenta</button>
+                            <?php if (!in_array($user_role, ['admin', 'superadmin'], true)): ?>
+                                <button type="button" class="danger-action-btn" id="deleteAccountBtn">Eliminar cuenta</button>
+                            <?php else: ?>
+                                <p class="settings-note">Solo un superadmin puede eliminar cuentas administradoras desde administracion.</p>
+                            <?php endif; ?>
                         </div>
                          
                     </div>
@@ -728,7 +811,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         <div class="edit-modal" id="editModal">
 
-    <div class="edit-modal-content">
+    <form class="edit-modal-content" method="post" action="/proyecto7mo/Frontend/api/update_profile_redirect.php">
 
         <button class="close-modal-btn" id="closeModalBtn" type="button">
             &times;
@@ -739,27 +822,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <input 
             type="text" 
             id="editName" 
+            name="name"
             placeholder="Nuevo nombre"
             maxlength="40"
             pattern="[\p{L}\p{N} ]{1,40}"
+            required
         >
 
         <label class="edit-field-label" for="editUsername">Nombre de Usuario</label>
         <input 
             type="text" 
             id="editUsername" 
+            name="username"
             placeholder="Nombre de Usuario"
             maxlength="20"
             pattern="[A-Za-z0-9]{1,20}"
+            required
         >
 
         <p class="edit-error-message" id="editProfileError"></p>
 
-        <button type="button" id="saveProfileChanges">
+        <button type="submit" class="save-profile-submit">
             Guardar cambios
         </button>
 
-    </div>
+    </form>
 
 </div>
         <div class="photo-modal" id="photoModal" aria-hidden="true">
@@ -810,7 +897,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const reviews = [];
             const editProfileBtn = document.getElementById('editProfileBtn');
             const editModal = document.getElementById('editModal');
-            const saveProfileChanges = document.getElementById('saveProfileChanges');
             const editName = document.getElementById('editName');
             const editUsername = document.getElementById('editUsername');
             const editProfileError = document.getElementById('editProfileError');
@@ -819,11 +905,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             const profileUsername = document.getElementById('profileUsername');
             const profileDescription = document.getElementById('profileDescription');
             let userInitial = <?= json_encode($user_initial) ?>;
-
             const showSection = (sectionId) => {
                 sections.forEach(section => {
                     section.classList.toggle('section-hidden', section.id !== sectionId);
                 });
+                if (sectionId === 'favoritas') {
+                    refreshFavoritesList();
+                }
             };
 
             const setActiveNav = (activeItem) => {
@@ -877,6 +965,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 navItems.forEach(item => {
                     item.addEventListener('click', (e) => {
                         e.preventDefault();
+                        window.location.hash = item.dataset.section === 'perfil' ? '' : item.dataset.section;
                         setActiveNav(item);
                         showSection(item.dataset.section);
 
@@ -901,10 +990,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             initSectionNavigation();
-            const initialSection = window.location.hash === '#favoritas' ? 'favoritas' : 'perfil';
-            const initialNav = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
-            if (initialNav) setActiveNav(initialNav);
-            showSection(initialSection);
+            const favoriteList = document.getElementById('favoriteList');
+            const favoriteFallbackPoster = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
+
+            const escapeHtml = (value) => String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+            async function refreshFavoritesList() {
+                if (!favoriteList) return;
+
+                try {
+                    const response = await fetch('/proyecto7mo/Frontend/api/favorites_list.php', {
+                        credentials: 'same-origin'
+                    });
+                    const data = await response.json();
+
+                    if (!data.success || !Array.isArray(data.favorites)) {
+                        return;
+                    }
+
+                    if (data.favorites.length === 0) {
+                        favoriteList.innerHTML = '<div class="empty-state"><p>Todavia no agregaste peliculas favoritas.</p></div>';
+                        return;
+                    }
+
+                    favoriteList.innerHTML = data.favorites.map((favorite) => `
+                        <a class="movie-card" href="/proyecto7mo/Frontend/explorar.php?focus=search&q=${encodeURIComponent(favorite.title || '')}">
+                            <img src="${escapeHtml(favorite.poster || favoriteFallbackPoster)}" alt="${escapeHtml(favorite.title)}">
+                            <div class="movie-overlay">
+                                <h3>${escapeHtml(favorite.title)}</h3>
+                            </div>
+                        </a>
+                    `).join('');
+                } catch (error) {
+                    // Mantiene la lista renderizada por PHP si falla el refresco.
+                }
+            }
+
+            const sectionFromHash = () => {
+                const sectionId = (window.location.hash || '#perfil').replace('#', '');
+                return document.getElementById(sectionId) ? sectionId : 'perfil';
+            };
+            const openSectionFromHash = () => {
+                const selectedSection = sectionFromHash();
+                const selectedNav = document.querySelector(`.nav-item[data-section="${selectedSection}"]`);
+                if (selectedNav) setActiveNav(selectedNav);
+                showSection(selectedSection);
+            };
+            openSectionFromHash();
+            window.addEventListener('hashchange', openSectionFromHash);
 
             inputDescripcion.addEventListener('blur', () => {
 
@@ -1086,59 +1224,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             updatePrivacySelection(<?= (int) $profile_is_public ?>);
 
 
-if(saveProfileChanges){
-
-    saveProfileChanges.addEventListener('click', () => {
-
-        const newName = editName.value.trim();
-        const newUsername = editUsername.value.trim();
-        const namePattern = /^[\p{L}\p{N} ]{1,40}$/u;
-        const usernamePattern = /^[A-Za-z0-9]{1,20}$/;
-
-        if (editProfileError) {
-            editProfileError.textContent = '';
-        }
-
-        if(!namePattern.test(newName)){
-            if (editProfileError) editProfileError.textContent = 'El nombre solo puede tener letras, numeros y espacios. Maximo 40 caracteres.';
-            return;
-        }
-
-        if(!usernamePattern.test(newUsername)){
-            if (editProfileError) editProfileError.textContent = 'El nombre de usuario solo puede tener letras y numeros. Maximo 20 caracteres.';
-            return;
-        }
-
-        fetch('/proyecto7mo/Frontend/user.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                action: 'update_profile',
-                name: newName,
-                username: newUsername
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-
-            if(data.success){
-                profileName.textContent = data.name;
-                if (profileUsername) profileUsername.textContent = '@' + data.username;
-                userInitial = data.name.charAt(0).toUpperCase();
-                if (profileInitial) profileInitial.textContent = userInitial;
-                editModal.classList.remove('show');
-            } else if (editProfileError) {
-                editProfileError.textContent = data.message || 'No se pudo actualizar el perfil.';
-            }
-
-        });
-
-    });
-
-}
-
 if (editProfileBtn && editModal) {
 editProfileBtn.addEventListener('click', () => {
     if (editName && profileName) editName.value = profileName.textContent.trim();
@@ -1147,14 +1232,6 @@ editProfileBtn.addEventListener('click', () => {
     editModal.classList.toggle('show');
 
 });
-}
-if(editName || editUsername){
-    [editName, editUsername].forEach((field) => field && field.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter'){
-            e.preventDefault();
-            saveProfileChanges.click();
-        }
-    }));
 }
 if(closeModalBtn){
 closeModalBtn.addEventListener('click', () => {

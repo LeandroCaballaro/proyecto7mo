@@ -65,6 +65,11 @@ class MoviesController
         $this->json($this->service->getReviewers($limit));
     }
 
+    public function ranking()
+    {
+        $this->json($this->service->getReputationRanking());
+    }
+
     public function register()
     {
         $d = $this->body();
@@ -99,7 +104,7 @@ class MoviesController
 
     public function movieReviews($movieId)
     {
-        $this->json($this->service->getReviewsForMovie($movieId));
+        $this->json($this->service->getReviewsForMovie($movieId, $_GET['sort'] ?? 'recent'));
     }
 
     public function reviewResponses($reviewId)
@@ -173,5 +178,19 @@ class MoviesController
             $this->json($result, 400);
         }
         $this->json($result, 201);
+    }
+
+    public function toggleReviewHeart($reviewId)
+    {
+        $user = $this->service->userFromToken($this->token());
+        if (!$user) {
+            $this->json(['error' => 'No autorizado'], 401);
+        }
+
+        $result = $this->service->toggleReviewHeart($user['id'], $reviewId);
+        if (isset($result['error'])) {
+            $this->json($result, 400);
+        }
+        $this->json($result);
     }
 }

@@ -25,12 +25,12 @@ function api_post($route, $data)
 $authError = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'] ?? '';
+    $identifier = $_POST['identifier'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    if (!empty($email) && !empty($password)) {
+    if (!empty($identifier) && !empty($password)) {
         $res = api_post('auth/login', [
-            'email'    => $email,
+            'identifier' => $identifier,
             'password' => $password
         ]);
 
@@ -54,12 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar Sesion - NexoHub</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style/login.css">
-  <link rel="stylesheet" href="style/styles.css">
+  <link rel="stylesheet" href="assets/css/login.css">
+  <link rel="stylesheet" href="assets/css/styles.css">
   <link rel="icon" href="public/nhlogo.png" type="image/png">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-  <?php include 'header.php'; ?>
+  <?php include 'components/header.php'; ?>
 
   <main class="flex-1 flex items-center justify-center py-12 px-4">
     <form method="POST" action="/proyecto7mo/Frontend/login.php" class="contenedor">
@@ -73,8 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <div class="labels">
         <div class="labeluser">
-          <p class="label">Correo Electronico</p>
-          <input type="email" name="email" class="input" placeholder="Ingrese su correo" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+          <p class="label">Correo o usuario</p>
+          <input type="text" name="identifier" class="input" placeholder="Ingrese su correo o nombre de usuario" required value="<?= htmlspecialchars($_POST['identifier'] ?? '') ?>">
         </div>
         <div class="labelpass">
           <p class="label">Contrasena</p>

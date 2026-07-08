@@ -54,7 +54,14 @@ if ($parts[0] === 'reviewers') {
     $api->reviewers();
 }
 
+if ($parts[0] === 'ranking') {
+    $api->ranking();
+}
+
 if ($parts[0] === 'reviews') {
+    if ($method === 'POST' && isset($parts[1], $parts[2]) && $parts[2] === 'heart' && is_numeric($parts[1])) {
+        $api->toggleReviewHeart((int) $parts[1]);
+    }
     if ($method === 'POST' && isset($parts[1], $parts[2]) && $parts[2] === 'responses' && is_numeric($parts[1])) {
         $api->addReviewResponse((int) $parts[1]);
     }

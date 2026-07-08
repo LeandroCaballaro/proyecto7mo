@@ -52,11 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nueva contrasena - NexoHub</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style/login.css">
-  <link rel="stylesheet" href="style/styles.css">
+  <link rel="stylesheet" href="assets/css/login.css">
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body class="bg-background text-foreground min-h-screen flex flex-col">
-  <?php include 'header.php'; ?>
+  <?php include 'components/header.php'; ?>
   <main class="flex-1 flex items-center justify-center py-12 px-4">
     <form method="POST" class="contenedor reset-container">
       <h1 class="titulo">Nueva contrasena</h1>

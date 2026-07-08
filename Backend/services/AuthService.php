@@ -69,9 +69,12 @@ class AuthService
         return $this->buildSession($userId, $name, $username, $email);
     }
 
-    public function login(string $email, string $password): array
+    public function login(string $identifier, string $password): array
     {
-        $user = $this->userModel->findByEmail($email);
+        $identifier = trim($identifier);
+        $user = filter_var($identifier, FILTER_VALIDATE_EMAIL)
+            ? $this->userModel->findByEmail($identifier)
+            : $this->userModel->findByUsername($identifier);
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
             return ['error' => 'Credenciales incorrectas'];

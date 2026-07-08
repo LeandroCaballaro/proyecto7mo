@@ -57,10 +57,10 @@ $showRegistro = isset($_GET['registro']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexoHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="style/styles.css" rel="stylesheet">
+    <link href="assets/css/styles.css" rel="stylesheet">
     <link rel="icon" href="/proyecto7mo/Frontend/public/nhlogo.png" type="image/png"></head>
 <body>
-    <?php include 'header.php'; ?>
+    <?php include 'components/header.php'; ?>
 
     <?php if ($showLogin || $showRegistro): ?>
     <section class="container mx-auto px-4 py-8 max-w-md">
@@ -79,14 +79,13 @@ $showRegistro = isset($_GET['registro']);
     <?php endif; ?>
 
     <main>
-        <?php include 'hero-section.php'; ?>
-        <?php include 'features-section.php'; ?>
-        <?php include 'genres-section.php'; ?>
+        <?php include 'components/hero-section.php'; ?>
+        <?php include 'components/features-section.php'; ?>
+        <?php include 'components/genres-section.php'; ?>
         <div class="w-full border-t border-border opacity-30"></div>
-        <?php include 'featured-movies-section.php'; ?>
-        <?php include 'top-reviewers-section.php'; ?>
-        <?php include 'cta-section.php'; ?>
+        <?php include 'components/featured-movies-section.php'; ?>
+        <?php include 'components/cta-section.php'; ?>
     </main>
-    <?php include 'footer.php'; ?>
+    <?php include 'components/footer.php'; ?>
 </body>
 </html>
