@@ -46,11 +46,14 @@ $peliculas = array_slice(array_values($peliculasUnicas), 0, 10);
                 <p class="text-muted-foreground col-span-full text-center">No hay películas destacadas disponibles.</p>
             <?php else: ?>
                 <?php foreach ($peliculas as $p): ?>
-                    <?php $coverPath = $p['_cover_path'] ?? movieCoverRelativePathFeatured((int) $p['id']); ?>
+                    <?php
+                    $coverPath = $p['_cover_path'] ?? movieCoverRelativePathFeatured((int) $p['id']);
+                    $coverUrl = $coverPath ? '/proyecto7mo/' . $coverPath : trim((string) ($p['poster_url'] ?? ''));
+                    ?>
                     <a href="/proyecto7mo/Frontend/explorar.php?movie_id=<?= (int) $p['id'] ?>" class="featured-movie-card" aria-label="Ver <?= htmlspecialchars($p['title']) ?>">
                         <div class="featured-movie-poster">
-                            <?php if ($coverPath): ?>
-                                <img src="/proyecto7mo/<?= htmlspecialchars($coverPath) ?>" alt="<?= htmlspecialchars($p['title']) ?>" loading="lazy" decoding="async">
+                            <?php if ($coverUrl !== ''): ?>
+                                <img src="<?= htmlspecialchars($coverUrl) ?>" alt="<?= htmlspecialchars($p['title']) ?>" loading="lazy" decoding="async">
                             <?php else: ?>
                                 <div class="featured-movie-placeholder">
                                     <span>🎬</span>

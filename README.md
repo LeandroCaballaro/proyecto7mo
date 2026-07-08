@@ -6,30 +6,30 @@ NexoHub es una plataforma PHP para explorar peliculas, escribir resenas, respond
 
 - Laragon o stack equivalente con Apache/Nginx, PHP 8.x y MySQL/MariaDB.
 - Extension PDO MySQL habilitada.
-- Acceso a internet solo para ejecutar el seed de peliculas desde API.
+- Acceso a internet para ejecutar los seeds que consultan APIs externas.
 
-## Estructura Principal
+## Estructura principal
 
 ```text
 proyecto7mo/
-├── Backend/
-│   ├── config/          Configuracion de BD y variables .env
-│   ├── controllers/     Controladores HTTP de la API
-│   ├── database/        Schema y seeds
-│   ├── models/          Acceso a datos
-│   ├── public/          Entrada API: api.php
-│   └── services/        Logica de autenticacion y peliculas
-├── Frontend/
-│   ├── api/             Endpoints auxiliares usados por vistas
-│   ├── assets/css/      Estilos
-│   ├── components/      Header, footer y secciones reutilizables
-│   ├── public/          Imagenes publicas y posters
-│   ├── uploads/         Fotos de perfil subidas localmente
-│   └── *.php            Paginas visibles
-└── index.php            Entrada publica principal
+|-- Backend/
+|   |-- config/          Configuracion de BD y variables .env
+|   |-- controllers/     Controladores HTTP de la API
+|   |-- database/        Schema y seeds
+|   |-- models/          Acceso a datos
+|   |-- public/          Entrada API: api.php
+|   `-- services/        Logica de autenticacion y peliculas
+|-- Frontend/
+|   |-- api/             Endpoints auxiliares usados por vistas
+|   |-- assets/css/      Estilos
+|   |-- components/      Header, footer y secciones reutilizables
+|   |-- public/          Imagenes publicas y posters
+|   |-- uploads/         Fotos de perfil subidas localmente
+|   `-- *.php            Paginas visibles
+`-- index.php            Entrada publica principal
 ```
 
-## Configuracion Local
+## Configuracion local
 
 1. Colocar el proyecto en `C:\laragon\www\proyecto7mo`.
 2. Iniciar Laragon.
@@ -46,11 +46,10 @@ mysql -u root proyecto7mo < Backend/database/001_schema.sql
 mysql -u root proyecto7mo < Backend/database/002_seed_users.sql
 ```
 
-6. Cargar peliculas reales desde API y luego comentarios demo:
+6. Cargar el catalogo real recomendado:
 
 ```powershell
-php Backend/database/003_seed_movies_from_api.php
-php Backend/database/004_seed_reviews_for_api_movies.php
+php Backend/database/005_seed_full_catalog.php
 ```
 
 Entrada web:
@@ -59,7 +58,17 @@ Entrada web:
 http://localhost/proyecto7mo/index.php
 ```
 
-## Usuarios Demo
+## Seeds recomendados
+
+El seed principal es `Backend/database/005_seed_full_catalog.php`.
+
+Ese seed carga 65 peliculas reales, 5 por cada genero del proyecto, usando IDs de IMDb y metadata de Cinemeta. Tambien crea 1 resena principal, 3 comentarios y corazones por pelicula para que el ranking y la actividad tengan datos desde el inicio.
+
+El seed reemplaza automaticamente los datos demo anteriores de `external_source = 'nexohub_seed'` y `external_source = 'nexohub_real'`. No borra peliculas creadas por usuarios ni peliculas de otras fuentes.
+
+Los scripts `003_seed_movies_from_api.php` y `004_seed_reviews_for_api_movies.php` quedan disponibles como alternativa incremental, pero para dejar el proyecto completo y consistente conviene ejecutar `005_seed_full_catalog.php`.
+
+## Usuarios demo
 
 Todos usan contrasena:
 
@@ -73,7 +82,7 @@ password
 
 El login acepta correo o nombre de usuario.
 
-## API Interna
+## API interna
 
 Entrada:
 
@@ -95,6 +104,6 @@ POST ?route=reviews
 POST ?route=reviews/{id}/responses
 ```
 
-## Notas De Almacenamiento
+## Notas de almacenamiento
 
-Actualmente las fotos de perfil se guardan en `Frontend/uploads` y la BD guarda la URL publica. Para produccion conviene moverlas fuera del repositorio o a un storage externo. Ver [Backend/README.md](Backend/README.md) para opciones.
+Actualmente las fotos de perfil se guardan en `Frontend/uploads` y la BD guarda la URL publica. Para produccion conviene moverlas fuera del repositorio o usar un storage externo. Ver `Backend/README.md` para opciones.

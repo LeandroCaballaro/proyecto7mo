@@ -468,9 +468,10 @@ if ($active_movie_id > 0 && !in_array($active_movie_id, array_map(fn($movie) => 
 
 foreach ($visiblePelículas as &$movie) {
     $coverPath = movieCoverRelativePath((int) $movie['id']);
+    $posterUrl = trim((string) ($movie['poster_url'] ?? ''));
     $movie['_cover_path'] = $coverPath;
-    $movie['_cover_url'] = $coverPath !== null ? '/proyecto7mo/' . $coverPath : '';
-    $movie['_has_cover'] = $coverPath !== null;
+    $movie['_cover_url'] = $coverPath !== null ? '/proyecto7mo/' . $coverPath : $posterUrl;
+    $movie['_has_cover'] = $coverPath !== null || $posterUrl !== '';
 }
 unset($movie);
 $moviesByGenre = [];
@@ -674,7 +675,7 @@ if (!empty($_SESSION['user']['id'])) {
                                     <div class="movie-card-container" onclick="openMovieModal(<?= (int)$p['id'] ?>)">
                                         <div class="movie-flip-card">
                                             <div class="movie-flip-card-front relative flex flex-col justify-between">
-                                                <?php if (!empty($p['_cover_path'])): ?>
+                                                <?php if (!empty($p['_cover_url'])): ?>
                                                     <img src="<?= htmlspecialchars($p['_cover_url']) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                                 <?php else: ?>
                                                     <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/30 flex flex-col items-center justify-center p-4">
@@ -701,8 +702,8 @@ if (!empty($_SESSION['user']['id'])) {
                                 <!-- FRONT SIDE -->
                                 <div class="movie-flip-card-front relative flex flex-col justify-between">
                                     <?php 
-                                    $coverPath = $p['_cover_path'] ?? null;
-                                    $hasCover = $coverPath !== null;
+                                    $coverUrl = $p['_cover_url'] ?? '';
+                                    $hasCover = $coverUrl !== '';
                                     if ($hasCover): 
                                     ?>
                                         <img src="<?= htmlspecialchars($p['_cover_url']) ?>" alt="<?= htmlspecialchars($p['title']) ?>" class="w-full h-full object-cover" loading="lazy" decoding="async">

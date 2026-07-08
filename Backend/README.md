@@ -15,28 +15,29 @@ DB_PASS=
 
 Si no existe `.env`, usa valores por defecto compatibles con Laragon.
 
-## Base De Datos Y Seeds
+## Base de datos y seeds
 
 Orden recomendado:
 
 ```powershell
 mysql -u root proyecto7mo < Backend/database/001_schema.sql
 mysql -u root proyecto7mo < Backend/database/002_seed_users.sql
-php Backend/database/003_seed_movies_from_api.php
-php Backend/database/004_seed_reviews_for_api_movies.php
+php Backend/database/005_seed_full_catalog.php
 ```
 
-`003_seed_movies_from_api.php` consulta Cinemeta y guarda `external_source`, `external_id` y `poster_url` para no depender de peliculas hardcodeadas.
+`005_seed_full_catalog.php` carga un catalogo real curado con 65 peliculas, metadata desde Cinemeta, portadas locales, resenas, comentarios y corazones.
+
+Los seeds `003_seed_movies_from_api.php` y `004_seed_reviews_for_api_movies.php` siguen disponibles como alternativa incremental, pero no son necesarios si ejecutas el seed completo.
 
 ## Roles
 
 - `user`: puede editar su perfil, escribir resenas, responder y marcar favoritas.
-- `admin`: puede entrar al panel de administracion y gestionar usuarios comunes/peliculas/comentarios.
+- `admin`: puede entrar al panel de administracion y gestionar usuarios comunes, peliculas y comentarios.
 - `superadmin`: ademas puede gestionar cuentas administradoras.
 
 Las cuentas `admin` y `superadmin` no pueden borrarse desde el perfil. Una cuenta administradora solo puede eliminarse desde administracion por un `superadmin`.
 
-## Fotos De Perfil
+## Fotos de perfil
 
 Hoy se guardan localmente en `Frontend/uploads`. Para no guardar imagenes dentro del proyecto hay tres caminos buenos:
 

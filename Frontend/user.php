@@ -135,7 +135,7 @@ if ($user_id) {
         $comments_count = $reviews_count + $responses_count;
         // Obtener reseñas del usuario
 $stmt = $db->prepare("
-    SELECT reviews.comment, reviews.rating, reviews.created_at, movies.id AS movie_id, movies.title
+    SELECT reviews.comment, reviews.rating, reviews.created_at, movies.id AS movie_id, movies.title, movies.poster_url
     FROM reviews
     INNER JOIN movies ON reviews.movie_id = movies.id
     WHERE reviews.user_id = ?
@@ -164,7 +164,7 @@ $user_activity = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ensure_favorites_table($db);
 $stmt = $db->prepare("
-    SELECT movies.id AS movie_id, movies.title
+    SELECT movies.id AS movie_id, movies.title, movies.poster_url
     FROM favorite_movies
     INNER JOIN movies ON favorite_movies.movie_id = movies.id
     WHERE favorite_movies.user_id = ?
@@ -656,7 +656,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $coverPath = movie_cover_path_user((int) $review['movie_id']);
                         $poster = $coverPath
                             ? $coverPath
-                            : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
+                            : (trim((string) ($review['poster_url'] ?? '')) ?: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>');
                     ?>
 
                     <div class="movie-card">
@@ -704,7 +704,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $coverPath = movie_cover_path_user((int) $favorite['movie_id']);
                         $poster = $coverPath
                             ? $coverPath
-                            : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>';
+                            : (trim((string) ($favorite['poster_url'] ?? '')) ?: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360"><rect width="240" height="360" fill="%231a1a2e"/><circle cx="120" cy="150" r="42" fill="%23e94560" opacity="0.35"/><text x="120" y="230" font-family="Arial,sans-serif" font-size="20" fill="%23f5f5f5" text-anchor="middle">NexoHub</text></svg>');
                     ?>
 
                     <div class="movie-card">
