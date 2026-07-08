@@ -1,7 +1,7 @@
 <?php
 function movieCoverRelativePathFeatured(int $movieId): ?string
 {
-    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] as $ext) {
         $file = __DIR__ . '/../public/covers/' . $movieId . '.' . $ext;
         if (file_exists($file)) {
             return 'Frontend/public/covers/' . $movieId . '.' . $ext;

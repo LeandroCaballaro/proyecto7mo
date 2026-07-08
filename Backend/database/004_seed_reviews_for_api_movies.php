@@ -3,7 +3,11 @@
 require_once __DIR__ . '/../models/Database.php';
 
 $pdo = Database::getInstance()->getConnection();
-$movieLimit = max(1, (int) (getenv('REVIEW_SEED_MOVIE_LIMIT') ?: 12));
+$limitEnv = getenv('REVIEW_SEED_MOVIE_LIMIT');
+$movieLimit = $limitEnv === false ? 12 : (int) $limitEnv;
+if ($movieLimit < 0) {
+    $movieLimit = 0;
+}
 
 $users = $pdo->query("
     SELECT id, name
@@ -17,14 +21,20 @@ if (count($users) < 2) {
     exit(1);
 }
 
-$movieStmt = $pdo->prepare("
+$movieSql = ""
     SELECT id, title, genre
     FROM movies
     WHERE external_source = 'cinemeta'
     ORDER BY featured DESC, year DESC, title ASC
-    LIMIT ?
-");
-$movieStmt->bindValue(1, $movieLimit, PDO::PARAM_INT);
+"";
+if ($movieLimit > 0) {
+    $movieSql .= "\n    LIMIT ?";
+}
+
+$movieStmt = $pdo->prepare($movieSql);
+if ($movieLimit > 0) {
+    $movieStmt->bindValue(1, $movieLimit, PDO::PARAM_INT);
+}
 $movieStmt->execute();
 $movies = $movieStmt->fetchAll(PDO::FETCH_ASSOC);
 

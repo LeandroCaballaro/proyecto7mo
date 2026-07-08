@@ -167,10 +167,10 @@ function ensure_favorites_table(PDO $db): void
 
 function movieCoverRelativePath(int $movieId): ?string
 {
-    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
-        $relative = 'Frontend/public/covers/' . $movieId . '.' . $ext;
-        if (file_exists(__DIR__ . '/../' . $relative)) {
-            return $relative;
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] as $ext) {
+        $file = __DIR__ . '/public/covers/' . $movieId . '.' . $ext;
+        if (file_exists($file)) {
+            return 'Frontend/public/covers/' . $movieId . '.' . $ext;
         }
     }
 

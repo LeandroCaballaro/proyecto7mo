@@ -13,7 +13,7 @@ function favorites_json(array $payload, int $statusCode = 200): void
 
 function favorite_cover_url(int $movieId): string
 {
-    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] as $ext) {
         $file = __DIR__ . '/../public/covers/' . $movieId . '.' . $ext;
         if (is_file($file)) {
             return '/proyecto7mo/Frontend/public/covers/' . $movieId . '.' . $ext;

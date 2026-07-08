@@ -59,7 +59,7 @@ function ensure_favorites_table(PDO $db): void
 
 function movie_cover_path_user(int $movieId): ?string
 {
-    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif'] as $ext) {
+    foreach (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] as $ext) {
         $relative = '/proyecto7mo/Frontend/public/covers/' . $movieId . '.' . $ext;
         $file = __DIR__ . '/public/covers/' . $movieId . '.' . $ext;
         if (file_exists($file)) {

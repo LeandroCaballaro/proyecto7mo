@@ -4,6 +4,28 @@ require_once __DIR__ . '/../models/Database.php';
 
 $pdo = Database::getInstance()->getConnection();
 
+function seed_write_placeholder_cover(int $movieId, string $title): void
+{
+    $coversDir = dirname(__DIR__, 2) . '/Frontend/public/covers';
+    if (!is_dir($coversDir)) {
+        mkdir($coversDir, 0755, true);
+    }
+
+    $safeTitle = preg_replace('/[^\p{L}\p{N}\s.-]+/u', '', trim($title)) ?: 'Pelicula';
+    $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <rect width="600" height="900" fill="#141826"/>
+  <rect x="36" y="36" width="528" height="828" rx="24" fill="#1f2639" stroke="#3b82f6" stroke-width="8"/>
+  <circle cx="300" cy="320" r="120" fill="#3b82f6" opacity="0.25"/>
+  <path d="M220 430h160c24 0 44 20 44v120H176v-120c0-24 20-44 44-44Z" fill="#f5f5f5" opacity="0.9"/>
+  <text x="300" y="690" fill="#f5f5f5" font-family="Arial, sans-serif" font-size="30" text-anchor="middle">{$safeTitle}</text>
+  <text x="300" y="742" fill="#8ea3c9" font-family="Arial, sans-serif" font-size="22" text-anchor="middle">NexoHub</text>
+</svg>
+SVG;
+
+    file_put_contents($coversDir . '/' . $movieId . '.svg', $svg);
+}
+
 $genres = ['Accion', 'Aventura', 'Animacion', 'Comedia', 'Crimen', 'Documental', 'Drama', 'Fantasia', 'Terror', 'Misterio', 'Romance', 'Ciencia ficcion', 'Thriller'];
 
 $genreTitles = [
@@ -98,6 +120,7 @@ try {
                 $movieId = (int) $pdo->lastInsertId();
             }
             $moviesWritten++;
+            seed_write_placeholder_cover($movieId, $title);
 
             $reviewUserId = (int) $users[$genreIndex % count($users)];
             $rating = array_keys($reviewTemplates)[$movieIndex % count($reviewTemplates)];
