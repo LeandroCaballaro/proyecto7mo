@@ -21,12 +21,12 @@ if (count($users) < 2) {
     exit(1);
 }
 
-$movieSql = ""
+$movieSql = "
     SELECT id, title, genre
     FROM movies
     WHERE external_source = 'cinemeta'
     ORDER BY featured DESC, year DESC, title ASC
-"";
+";
 if ($movieLimit > 0) {
     $movieSql .= "\n    LIMIT ?";
 }

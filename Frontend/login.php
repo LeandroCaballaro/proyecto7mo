@@ -6,21 +6,7 @@ if (!empty($_SESSION['user'])) {
     exit;
 }
 
-define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
-
-function api_post($route, $data)
-{
-    $ctx = stream_context_create([
-        'http' => [
-            'method'        => 'POST',
-            'header'        => "Content-Type: application/json\r\n",
-            'content'       => json_encode($data),
-            'ignore_errors' => true,
-        ],
-    ]);
-    $raw = @file_get_contents(API_URL . '?route=' . urlencode($route), false, $ctx);
-    return $raw ? json_decode($raw, true) : null;
-}
+require_once __DIR__ . '/api_helper.php';
 
 $authError = '';
 
@@ -58,60 +44,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="assets/css/styles.css">
   <link rel="icon" href="public/nhlogo.png" type="image/png">
 </head>
-<body class="bg-background text-foreground min-h-screen flex flex-col">
-  <?php include 'components/header.php'; ?>
+<body class="bg-background text-foreground flex items-center justify-center min-h-screen">
+  <div class="card p-8 rounded-lg shadow-lg w-full max-w-md">
+    <div class="logo">
+      <img src="public/NexoHub%20Logo.png" alt="NexoHub Logo">
+    </div>
 
-  <main class="flex-1 flex items-center justify-center py-12 px-4">
+    <?php if (!empty($authError)): ?>
+      <div class="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded mb-4 text-sm">
+        <?= htmlspecialchars($authError) ?>
+      </div>
+    <?php endif; ?>
+
     <form method="POST" action="/proyecto7mo/Frontend/login.php" class="contenedor">
-      <h1 class="titulo">Inicia Sesion</h1>
-
-      <?php if ($authError): ?>
-        <div class="error-message">
-          <?= htmlspecialchars($authError) ?>
-        </div>
-      <?php endif; ?>
-
-      <div class="labels">
-        <div class="labeluser">
-          <p class="label">Correo o usuario</p>
-          <input type="text" name="identifier" class="input" placeholder="Ingrese su correo o nombre de usuario" required value="<?= htmlspecialchars($_POST['identifier'] ?? '') ?>">
-        </div>
-        <div class="labelpass">
-          <p class="label">Contrasena</p>
-          <div class="password-container">
-            <input type="password" name="password" id="password" class="input" placeholder="Ingrese su contrasena" required>
-            <span id="togglePassword" class="password-toggle cursor-pointer select-none" role="button" aria-label="Mostrar contrasena"></span>
-          </div>
-        </div>
+      <div class="mb-4">
+        <label for="identifier" class="block text-sm font-medium mb-1">Email o Nombre de Usuario</label>
+        <input
+          type="text"
+          id="identifier"
+          name="identifier"
+          required
+          autocomplete="username"
+          class="w-full px-3 py-2 bg-secondary border border-border rounded text-foreground focus:outline-none focus:border-primary"
+          placeholder="gonzalo o gonzalo@ejemplo.com"
+          value="<?= htmlspecialchars($_POST['identifier'] ?? '') ?>"
+        >
       </div>
 
-      <button type="submit" class="btn">Iniciar Sesion</button>
+      <div class="mb-6">
+        <label for="password" class="block text-sm font-medium mb-1">Contrasena</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          autocomplete="current-password"
+          class="w-full px-3 py-2 bg-secondary border border-border rounded text-foreground focus:outline-none focus:border-primary"
+          placeholder="••••••••"
+        >
+      </div>
 
-      <p class="text-center text-xs text-muted-foreground mt-3">
-        <a href="/proyecto7mo/Frontend/forgot_password.php" class="text-primary hover:underline font-semibold">Olvidaste tu contrasena?</a>
-      </p>
-
-      <p class="text-center text-xs text-muted-foreground mt-4">
-        No tienes cuenta? <a href="/proyecto7mo/Frontend/sing_up.php" class="text-primary hover:underline font-semibold">Registrate gratis</a>
-      </p>
+      <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-2 px-4 rounded transition duration-200">
+        Iniciar Sesion
+      </button>
     </form>
-  </main>
 
-  <script>
-    const togglePassword = document.querySelector('#togglePassword');
-    const password = document.querySelector('#password');
-    const showIcon = '🙈';
-    const hideIcon = '🙉';
+    <div class="mt-4 text-center text-sm">
+      <a href="/proyecto7mo/Frontend/forgot_password.php" class="text-primary hover:underline font-semibold">Olvidaste tu contrasena?</a>
+    </div>
 
-    if (togglePassword && password) {
-      togglePassword.textContent = showIcon;
-      togglePassword.addEventListener('click', function () {
-        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-        password.setAttribute('type', type);
-        this.textContent = type === 'password' ? showIcon : hideIcon;
-        this.setAttribute('aria-label', type === 'password' ? 'Mostrar contrasena' : 'Ocultar contrasena');
-      });
-    }
-  </script>
+    <div class="mt-2 text-center text-sm text-muted-foreground">
+      No tienes cuenta? <a href="/proyecto7mo/Frontend/sing_up.php" class="text-primary hover:underline font-semibold">Registrate gratis</a>
+    </div>
+  </div>
 </body>
 </html>

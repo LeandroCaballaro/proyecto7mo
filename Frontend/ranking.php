@@ -1,13 +1,6 @@
 <?php
 session_start();
-define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
-
-function api_get($route, $extra = [])
-{
-    $url = API_URL . '?' . http_build_query(array_merge(['route' => $route], $extra));
-    $raw = @file_get_contents($url);
-    return $raw ? json_decode($raw, true) : null;
-}
+require_once __DIR__ . '/api_helper.php';
 
 $rankingRows = api_get('ranking') ?: [];
 $byGenre = [];
@@ -38,6 +31,7 @@ ksort($byGenre);
 <?php include 'components/header.php'; ?>
 <main class="ranking-page">
     <header class="ranking-hero">
+        <span class="ranking-kicker">Comunidad</span>
         <h1>Ranking de reputación</h1>
         <p>La reputación se calcula por categoría: cada 10 corazones recibidos en reseñas suman 1 punto.</p>
     </header>
