@@ -56,3 +56,22 @@ export interface RankingUserDto {
   genre?: string;
 }
 
+/** Resultado de búsqueda en la fuente externa (TMDB o Cinemeta). */
+export interface ExternalMovieResult {
+  externalId: string;
+  title: string;
+  originalTitle: string | null;
+  releaseYear: number | null;
+  posterUrl: string | null;
+  description: string | null;
+}
+
+/** Metadata completa de una película externa, ya en español cuando es posible. */
+export interface ExternalMovieMeta extends ExternalMovieResult {
+  director: string | null;
+  genres: string[];
+  genreSlug: string;
+  synopsis: string | null;
+  externalRating: number | null;
+  source: 'tmdb' | 'cinemeta';
+}

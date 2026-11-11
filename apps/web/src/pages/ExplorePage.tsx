@@ -186,7 +186,7 @@ export function ExplorePage() {
           <SlidersHorizontal className="h-10 w-10 text-[#a0a0a0] mx-auto opacity-50" />
           <h3 className="text-base font-semibold text-[#f5f5f5]">No se encontraron películas</h3>
           <p className="text-xs text-[#a0a0a0] max-w-sm mx-auto">
-            ¿La película no está en nuestro catálogo? Búscala en IMDb y sé el primero en reseñarla.
+            ¿La película no está en nuestro catálogo? Búscala en TMDB y sé el primero en reseñarla.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             <Button
@@ -197,12 +197,8 @@ export function ExplorePage() {
               Limpiar Filtros
             </Button>
             <Link to="/proponer">
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<PlusCircle className="h-4 w-4" />}
-              >
-                Buscar en IMDb y Reseñar
+              <Button variant="primary" size="sm" leftIcon={<PlusCircle className="h-4 w-4" />}>
+                Buscar y reseñar
               </Button>
             </Link>
           </div>

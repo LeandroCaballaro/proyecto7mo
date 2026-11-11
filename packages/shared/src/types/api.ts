@@ -35,6 +35,8 @@ export const API_ERROR_CODES = [
   'CONFLICT',
   'PAYLOAD_TOO_LARGE',
   'RATE_LIMITED',
+  /** La fuente externa de películas (TMDB/Cinemeta) no respondió. */
+  'EXTERNAL_UNAVAILABLE',
   'INTERNAL_ERROR',
 ] as const;
 

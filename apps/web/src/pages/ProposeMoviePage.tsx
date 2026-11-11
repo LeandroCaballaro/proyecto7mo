@@ -15,40 +15,25 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { GENRES, type CreateMovieInput } from '@nexohub/shared';
+import {
+  GENRES,
+  type CreateMovieInput,
+  type ExternalMovieMeta,
+  type ExternalMovieResult as ExternalSearchResult,
+} from '@nexohub/shared';
 import { Badge, Button, Combobox, Input, Skeleton, StarRating } from '../components/ui';
 import { apiClient } from '../lib/api-client';
 import { useAuthStore } from '../stores/auth.store';
-
-interface ExternalSearchResult {
-  imdbId: string;
-  title: string;
-  releaseYear: number | null;
-  posterUrl: string | null;
-  description: string | null;
-}
-
-interface ExternalMovieMeta {
-  imdbId: string;
-  title: string;
-  releaseYear: number | null;
-  director: string | null;
-  genres: string[];
-  genreSlug: string;
-  synopsis: string | null;
-  posterUrl: string | null;
-  imdbRating: string | null;
-}
 
 export function ProposeMoviePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
-  // Estados del buscador IMDb
+  // Estados del buscador externo
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedImdbId, setSelectedImdbId] = useState<string | null>(null);
+  const [selectedExternalId, setSelectedExternalId] = useState<string | null>(null);
 
   // Estados del formulario y reseña
   const [selectedGenreSlug, setSelectedGenreSlug] = useState('drama');
@@ -63,11 +48,8 @@ export function ProposeMoviePage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Query: Resultados de búsqueda en IMDb / Cinemeta
-  const {
-    data: searchResults,
-    isLoading: isSearching,
-  } = useQuery({
+  // Query: resultados de búsqueda en TMDB (o Cinemeta si no hay clave)
+  const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['external-movies-search', debouncedSearch],
     queryFn: async () => {
       if (!debouncedSearch || debouncedSearch.length < 2) return [];
@@ -76,26 +58,23 @@ export function ProposeMoviePage() {
       );
       return res.data;
     },
-    enabled: Boolean(debouncedSearch && debouncedSearch.length >= 2 && !selectedImdbId),
+    enabled: Boolean(debouncedSearch && debouncedSearch.length >= 2 && !selectedExternalId),
   });
 
   // Query: Metadata completa de la película seleccionada
-  const {
-    data: selectedMovieMeta,
-    isLoading: isLoadingMeta,
-  } = useQuery({
-    queryKey: ['external-movie-meta', selectedImdbId],
+  const { data: selectedMovieMeta, isLoading: isLoadingMeta } = useQuery({
+    queryKey: ['external-movie-meta', selectedExternalId],
     queryFn: async () => {
-      if (!selectedImdbId) return null;
+      if (!selectedExternalId) return null;
       const res = await apiClient<{ data: ExternalMovieMeta }>(
-        `/movies/external/${selectedImdbId}`,
+        `/movies/external/${selectedExternalId}`,
       );
       return res.data;
     },
-    enabled: Boolean(selectedImdbId),
+    enabled: Boolean(selectedExternalId),
   });
 
-  // Sincronizar el género mapeado cuando se carga la metadata de IMDb
+  // Sincronizar el género mapeado cuando se carga la metadata externa
   useEffect(() => {
     if (selectedMovieMeta?.genreSlug) {
       setSelectedGenreSlug(selectedMovieMeta.genreSlug);
@@ -124,13 +103,13 @@ export function ProposeMoviePage() {
     },
   });
 
-  function handleSelectMovie(imdbId: string) {
-    setSelectedImdbId(imdbId);
+  function handleSelectMovie(externalId: string) {
+    setSelectedExternalId(externalId);
     setSearchTerm('');
   }
 
   function handleResetSelection() {
-    setSelectedImdbId(null);
+    setSelectedExternalId(null);
     setReviewContent('');
     setRating(5);
   }
@@ -157,12 +136,12 @@ export function ProposeMoviePage() {
       director: selectedMovieMeta.director || undefined,
       synopsis: selectedMovieMeta.synopsis || undefined,
       posterUrl: selectedMovieMeta.posterUrl || undefined,
-      imdbId: selectedMovieMeta.imdbId,
+      externalId: selectedMovieMeta.externalId,
       initialReview: {
         rating,
         content: reviewContent.trim(),
       },
-    } as any);
+    });
   }
 
   const genreOptions = GENRES.map((g) => ({
@@ -178,7 +157,8 @@ export function ProposeMoviePage() {
     5: 'Excelente obra maestra',
   };
 
-  const fallbackPoster = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=80';
+  const fallbackPoster =
+    'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=80';
 
   return (
     <div className="space-y-8 pb-16 pt-2 max-w-6xl mx-auto">
@@ -194,21 +174,21 @@ export function ProposeMoviePage() {
           Reseñar Película Fuera de Catálogo
         </h1>
         <p className="text-sm text-[#a0a0a0] mt-2 max-w-2xl leading-relaxed">
-          ¿La película que deseas calificar no está en NexoHub? Búscala en la base de datos oficial
-          de IMDb. La información (póster oficial, director, año y sinopsis) se verificará
-          automáticamente para garantizar la legitimidad del catálogo.
+          ¿La película que deseas calificar no está en NexoHub? Búscala en la base de datos de TMDB.
+          La información (póster oficial, director, año y sinopsis) se verificará automáticamente
+          para garantizar la legitimidad del catálogo.
         </p>
       </header>
 
       {/* ========================================================= */}
-      {/* PASO 1: BUSCADOR EN VIVO DE IMDB                          */}
+      {/* PASO 1: BUSCADOR EN VIVO (TMDB)                           */}
       {/* ========================================================= */}
-      {!selectedImdbId && (
+      {!selectedExternalId && (
         <section className="bg-[#16213e] border border-[#0f3460] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
           <div className="space-y-2">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Search className="h-5 w-5 text-[#e94560]" />
-              Paso 1: Busca la película en la base de datos de IMDb
+              Paso 1: Busca la película en la base de datos de TMDB
             </h2>
             <p className="text-xs text-[#a0a0a0]">
               Escribe el título exacto o una palabra clave en español o en su idioma original.
@@ -244,17 +224,21 @@ export function ProposeMoviePage() {
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between text-xs text-[#a0a0a0]">
                 <span>
-                  Resultados encontrados para <strong className="text-white">"{debouncedSearch}"</strong>
+                  Resultados encontrados para{' '}
+                  <strong className="text-white">"{debouncedSearch}"</strong>
                 </span>
                 <span className="text-[11px] font-semibold text-[#e94560] uppercase">
-                  Verificación IMDb Activa
+                  Verificación automática activa
                 </span>
               </div>
 
               {isSearching ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="flex gap-3 p-3 bg-[#0f172a] rounded-xl border border-[#0f3460] animate-pulse">
+                    <div
+                      key={i}
+                      className="flex gap-3 p-3 bg-[#0f172a] rounded-xl border border-[#0f3460] animate-pulse"
+                    >
                       <Skeleton className="w-16 h-24 rounded-lg shrink-0" />
                       <div className="space-y-2 flex-1">
                         <Skeleton className="h-4 w-3/4 rounded" />
@@ -267,8 +251,8 @@ export function ProposeMoviePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[480px] overflow-y-auto pr-1">
                   {searchResults.map((movie) => (
                     <div
-                      key={movie.imdbId}
-                      onClick={() => handleSelectMovie(movie.imdbId)}
+                      key={movie.externalId}
+                      onClick={() => handleSelectMovie(movie.externalId)}
                       className="group flex gap-3.5 p-3 rounded-xl bg-[#0f172a] border border-[#0f3460] hover:border-[#e94560] transition-all duration-200 cursor-pointer shadow-md hover:-translate-y-0.5"
                     >
                       <div className="w-16 h-24 rounded-lg overflow-hidden bg-[#16213e] shrink-0 border border-[#0f3460]/70">
@@ -295,7 +279,7 @@ export function ProposeMoviePage() {
                               </span>
                             )}
                             <Badge variant="zinc" size="sm">
-                              {movie.imdbId}
+                              {movie.externalId}
                             </Badge>
                           </div>
                         </div>
@@ -315,7 +299,7 @@ export function ProposeMoviePage() {
                 <div className="py-12 text-center bg-[#0f172a] rounded-xl border border-[#0f3460] space-y-2">
                   <Film className="h-8 w-8 text-[#a0a0a0] mx-auto opacity-40" />
                   <p className="text-sm text-[#cbd5e1] font-medium">
-                    No se encontraron películas en IMDb con ese término.
+                    No se encontraron películas con ese término.
                   </p>
                   <p className="text-xs text-[#a0a0a0]">
                     Prueba buscando por el título en inglés o revisando la ortografía.
@@ -330,15 +314,13 @@ export function ProposeMoviePage() {
       {/* ========================================================= */}
       {/* PASO 2: PELÍCULA VERIFICADA + FORMULARIO DE RESEÑA         */}
       {/* ========================================================= */}
-      {selectedImdbId && (
+      {selectedExternalId && (
         <div className="space-y-6 animate-in fade-in-50 duration-300">
           {/* Botón de Selección / Reemplazo */}
           <div className="flex items-center justify-between bg-[#16213e] border border-[#0f3460] rounded-xl px-4 py-3">
             <div className="flex items-center gap-2 text-xs text-[#cbd5e1]">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>
-                Película seleccionada y verificada contra base de datos oficial de IMDb.
-              </span>
+              <span>Película seleccionada y verificada contra la base de datos externa.</span>
             </div>
             <Button
               variant="outline"
@@ -366,16 +348,16 @@ export function ProposeMoviePage() {
               {/* Tarjeta de la Película Verificada (Columna Izquierda) */}
               <aside className="lg:col-span-5 lg:sticky lg:top-24">
                 <div className="bg-[#16213e] border border-[#0f3460] rounded-2xl p-6 sm:p-7 shadow-2xl relative overflow-hidden space-y-5">
-                  {/* Badge de Verificación IMDb */}
+                  {/* Badge de verificación */}
                   <div className="flex items-center justify-between">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold">
                       <ShieldCheck className="h-3.5 w-3.5" />
-                      <span>Verificada IMDb: {selectedMovieMeta.imdbId}</span>
+                      <span>Verificada: {selectedMovieMeta.externalId}</span>
                     </div>
-                    {selectedMovieMeta.imdbRating && (
+                    {selectedMovieMeta.externalRating != null && (
                       <div className="flex items-center gap-1 text-xs font-bold text-amber-400">
                         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span>{selectedMovieMeta.imdbRating} / 10</span>
+                        <span>{selectedMovieMeta.externalRating} / 10</span>
                       </div>
                     )}
                   </div>
@@ -408,7 +390,8 @@ export function ProposeMoviePage() {
                         <>
                           <span className="text-[#0f3460]">•</span>
                           <span>
-                            Dirigida por <strong className="text-white">{selectedMovieMeta.director}</strong>
+                            Dirigida por{' '}
+                            <strong className="text-white">{selectedMovieMeta.director}</strong>
                           </span>
                         </>
                       )}
@@ -437,8 +420,8 @@ export function ProposeMoviePage() {
                     Paso 2: Escribe tu reseña para esta película
                   </h3>
                   <p className="text-xs text-[#a0a0a0]">
-                    Esta película se incorporará al catálogo de NexoHub con su información oficial
-                    y tu reseña será la primera visible para la comunidad.
+                    Esta película se incorporará al catálogo de NexoHub con su información oficial y
+                    tu reseña será la primera visible para la comunidad.
                   </p>
                 </div>
 
@@ -457,7 +440,7 @@ export function ProposeMoviePage() {
                       searchable={false}
                     />
                     <p className="text-[11px] text-[#a0a0a0]">
-                      Auto-detectado de los géneros oficiales de IMDb:{' '}
+                      Auto-detectado de los géneros de la fuente:{' '}
                       <strong className="text-white">
                         {selectedMovieMeta.genres?.join(', ') || 'General'}
                       </strong>
@@ -537,4 +520,3 @@ export function ProposeMoviePage() {
     </div>
   );
 }
-

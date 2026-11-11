@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Footer } from './components/layout/Footer';
 import { Header } from './components/layout/Header';
@@ -57,15 +57,12 @@ export function App() {
         }}
       />
 
-      <Header onOpenPropose={() => {}} />
+      <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6">
         <Routes>
-          <Route path="/" element={<HomePage onOpenPropose={() => {}} />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/explorar" element={<ExplorePage />} />
-          <Route path="/proponer" element={<ProposeMoviePage />} />
-          <Route path="/proponer-pelicula" element={<ProposeMoviePage />} />
-          <Route path="/nueva-resena" element={<ProposeMoviePage />} />
           <Route path="/peliculas/:id" element={<MovieDetailPage />} />
           <Route path="/pelicula/:id" element={<MovieDetailPage />} />
           <Route path="/movies/:id" element={<MovieDetailPage />} />
@@ -78,13 +75,17 @@ export function App() {
           {/* Rutas protegidas */}
           <Route element={<ProtectedRoute />}>
             <Route path="/favoritos" element={<FavoritesPage />} />
-            <Route path="/perfil" element={<UserProfileDashboard />} />
+            <Route path="/proponer" element={<ProposeMoviePage />} />
+            <Route path="/proponer-pelicula" element={<ProposeMoviePage />} />
+            <Route path="/nueva-resena" element={<ProposeMoviePage />} />
           </Route>
 
           {/* Rutas administrativas */}
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminPage />} />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 

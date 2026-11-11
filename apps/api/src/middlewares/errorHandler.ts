@@ -20,7 +20,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   const body: ApiErrorBody = {
     error: {
       code: appError.code,
-      message: appError.status >= 500 && isProd ? 'Error interno del servidor' : appError.message,
+      message:
+        appError.code === 'INTERNAL_ERROR' && isProd
+          ? 'Error interno del servidor'
+          : appError.message,
       ...(appError.details ? { details: appError.details } : {}),
     },
   };
@@ -48,7 +51,11 @@ function toAppError(err: unknown): AppError {
     const type = (err as { type?: string }).type;
     if (type === 'entity.parse.failed') return AppError.badRequest('JSON mal formado');
     if (type === 'entity.too.large') {
-      return new AppError(413, 'PAYLOAD_TOO_LARGE', 'El cuerpo de la solicitud es demasiado grande');
+      return new AppError(
+        413,
+        'PAYLOAD_TOO_LARGE',
+        'El cuerpo de la solicitud es demasiado grande',
+      );
     }
   }
 
@@ -58,4 +65,3 @@ function toAppError(err: unknown): AppError {
     err instanceof Error ? err.message : 'Error interno del servidor',
   );
 }
-

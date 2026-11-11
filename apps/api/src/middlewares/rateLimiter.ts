@@ -30,7 +30,9 @@ export const loginLimiter = rateLimit({
   limit: 8,
   skipSuccessfulRequests: true,
   keyGenerator: (req: Request) => {
-    const identifier = String((req.body as { identifier?: unknown })?.identifier ?? '').toLowerCase();
+    const identifier = String(
+      (req.body as { identifier?: unknown })?.identifier ?? '',
+    ).toLowerCase();
     // ipKeyGenerator agrupa IPv6 por subred /56 para que no se pueda rotar la IP y evadir el límite.
     return `${ipKeyGenerator(req.ip ?? '')}:${identifier}`;
   },
@@ -56,4 +58,14 @@ export const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 120,
   message: tooMany('Demasiadas renovaciones de sesión.'),
+});
+
+/** Búsqueda en TMDB/Cinemeta: protege el cupo de la API externa y de traducción. */
+export const externalLimiter = rateLimit({
+  ...common,
+  windowMs: 60 * 1000,
+  limit: 40,
+  keyGenerator: (req: Request) =>
+    req.auth ? `u:${req.auth.userId}` : ipKeyGenerator(req.ip ?? ''),
+  message: tooMany('Demasiadas búsquedas externas. Esperá un minuto.'),
 });

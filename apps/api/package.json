@@ -15,6 +15,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "db:seed": "prisma db seed",
+    "db:import-movies": "tsx prisma/seed/import-movies.ts",
+    "db:accounts": "tsx prisma/seed/accounts.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

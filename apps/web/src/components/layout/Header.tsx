@@ -1,21 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Heart,
-  LogOut,
-  Menu,
-  PlusCircle,
-  Search,
-  ShieldCheck,
-  Star,
-  User,
-  X,
-} from 'lucide-react';
+import { Heart, LogOut, Menu, PlusCircle, Search, ShieldCheck, Star, User, X } from 'lucide-react';
 import { isStaff } from '@nexohub/shared';
 import { useAuthStore } from '../../stores/auth.store';
 import { Badge, Button } from '../ui';
 
-export function Header({ onOpenPropose }: { onOpenPropose: () => void }) {
+export function Header() {
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,11 +32,7 @@ export function Header({ onOpenPropose }: { onOpenPropose: () => void }) {
         {/* Logo Original */}
         <Link to="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e94560] transition-transform duration-300 group-hover:scale-105 shadow-lg shadow-[#e94560]/25">
-            <svg
-              className="h-6 w-6 text-white ml-0.5"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-6 w-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M7 4v16l13-8L7 4z" />
             </svg>
           </div>
@@ -139,7 +125,11 @@ export function Header({ onOpenPropose }: { onOpenPropose: () => void }) {
                 >
                   <div className="h-8 w-8 rounded-lg bg-[#0f3460] border border-[#16213e] flex items-center justify-center font-bold text-xs text-[#e94560] overflow-hidden">
                     {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       user.name.charAt(0).toUpperCase()
                     )}
@@ -159,7 +149,16 @@ export function Header({ onOpenPropose }: { onOpenPropose: () => void }) {
                       <p className="text-xs font-semibold text-[#f5f5f5]">{user.name}</p>
                       <p className="text-[11px] text-[#a0a0a0] truncate">{user.email}</p>
                       <div className="mt-1.5">
-                        <Badge variant={user.role === 'SUPERADMIN' ? 'purple' : user.role === 'ADMIN' ? 'amber' : 'zinc'} size="sm">
+                        <Badge
+                          variant={
+                            user.role === 'SUPERADMIN'
+                              ? 'purple'
+                              : user.role === 'ADMIN'
+                                ? 'amber'
+                                : 'zinc'
+                          }
+                          size="sm"
+                        >
                           {user.role}
                         </Badge>
                       </div>

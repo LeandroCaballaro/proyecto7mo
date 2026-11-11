@@ -1,15 +1,49 @@
 import { PrismaClient, type Role } from '@prisma/client';
 import { GENRES, LIKES_PER_POINT } from '@nexohub/shared';
 import { hashPassword } from '../../src/lib/password';
+import { isTmdbEnabled, tmdb } from '../../src/lib/tmdb';
+import { translateText } from '../../src/lib/translator';
+import { metaFromTmdbDetails } from '../../src/modules/movies/external.service';
+import { upsertPersonalAccounts } from './accounts';
 
 const prisma = new PrismaClient();
 
 const DEMO_USERS: { name: string; username: string; email: string; bio: string; role: Role }[] = [
-  { name: 'Admin NexoHub', username: 'admin', email: 'admin@nexohub.local', bio: 'Cuenta administradora para pruebas.', role: 'ADMIN' },
-  { name: 'Super Admin', username: 'superadmin', email: 'superadmin@nexohub.local', bio: 'Cuenta superadmin para administración completa.', role: 'SUPERADMIN' },
-  { name: 'Carlos Perez', username: 'carlosp', email: 'carlos@nexohub.local', bio: 'Fan del cine de aventura y acción.', role: 'USER' },
-  { name: 'Ana Gomez', username: 'anagomez', email: 'ana@nexohub.local', bio: 'Reseñas de drama, romance y comedia.', role: 'USER' },
-  { name: 'Maria Lopez', username: 'marial', email: 'maria@nexohub.local', bio: 'Me gustan las historias con misterio.', role: 'USER' },
+  {
+    name: 'Admin NexoHub',
+    username: 'admin',
+    email: 'admin@nexohub.local',
+    bio: 'Cuenta administradora para pruebas.',
+    role: 'ADMIN',
+  },
+  {
+    name: 'Super Admin',
+    username: 'superadmin',
+    email: 'superadmin@nexohub.local',
+    bio: 'Cuenta superadmin para administración completa.',
+    role: 'SUPERADMIN',
+  },
+  {
+    name: 'Carlos Perez',
+    username: 'carlosp',
+    email: 'carlos@nexohub.local',
+    bio: 'Fan del cine de aventura y acción.',
+    role: 'USER',
+  },
+  {
+    name: 'Ana Gomez',
+    username: 'anagomez',
+    email: 'ana@nexohub.local',
+    bio: 'Reseñas de drama, romance y comedia.',
+    role: 'USER',
+  },
+  {
+    name: 'Maria Lopez',
+    username: 'marial',
+    email: 'maria@nexohub.local',
+    bio: 'Me gustan las historias con misterio.',
+    role: 'USER',
+  },
 ];
 
 const CATALOG: Record<string, { id: string; title: string; year?: number; director?: string }[]> = {
@@ -17,13 +51,23 @@ const CATALOG: Record<string, { id: string; title: string; year?: number; direct
     { id: 'tt0468569', title: 'The Dark Knight', year: 2008, director: 'Christopher Nolan' },
     { id: 'tt2911666', title: 'John Wick', year: 2014, director: 'Chad Stahelski' },
     { id: 'tt1392190', title: 'Mad Max: Fury Road', year: 2015, director: 'George Miller' },
-    { id: 'tt4154756', title: 'Avengers: Infinity War', year: 2018, director: 'Anthony & Joe Russo' },
+    {
+      id: 'tt4154756',
+      title: 'Avengers: Infinity War',
+      year: 2018,
+      director: 'Anthony & Joe Russo',
+    },
     { id: 'tt1745960', title: 'Top Gun: Maverick', year: 2022, director: 'Joseph Kosinski' },
   ],
   aventura: [
     { id: 'tt0082971', title: 'Raiders of the Lost Ark', year: 1981, director: 'Steven Spielberg' },
     { id: 'tt0107290', title: 'Jurassic Park', year: 1993, director: 'Steven Spielberg' },
-    { id: 'tt0325980', title: 'Pirates of the Caribbean: The Curse of the Black Pearl', year: 2003, director: 'Gore Verbinski' },
+    {
+      id: 'tt0325980',
+      title: 'Pirates of the Caribbean: The Curse of the Black Pearl',
+      year: 2003,
+      director: 'Gore Verbinski',
+    },
     { id: 'tt0454876', title: 'Life of Pi', year: 2012, director: 'Ang Lee' },
     { id: 'tt1160419', title: 'Dune', year: 2021, director: 'Denis Villeneuve' },
   ],
@@ -32,7 +76,12 @@ const CATALOG: Record<string, { id: string; title: string; year?: number; direct
     { id: 'tt0910970', title: 'WALL-E', year: 2008, director: 'Andrew Stanton' },
     { id: 'tt2096673', title: 'Inside Out', year: 2015, director: 'Pete Docter' },
     { id: 'tt2948356', title: 'Zootopia', year: 2016, director: 'Byron Howard' },
-    { id: 'tt4633694', title: 'Spider-Man: Into the Spider-Verse', year: 2018, director: 'Bob Persichetti' },
+    {
+      id: 'tt4633694',
+      title: 'Spider-Man: Into the Spider-Verse',
+      year: 2018,
+      director: 'Bob Persichetti',
+    },
   ],
   comedia: [
     { id: 'tt0107048', title: 'Groundhog Day', year: 1993, director: 'Harold Ramis' },
@@ -53,7 +102,12 @@ const CATALOG: Record<string, { id: string; title: string; year?: number; direct
     { id: 'tt2375605', title: 'The Act of Killing', year: 2012, director: 'Joshua Oppenheimer' },
     { id: 'tt2545118', title: 'Blackfish', year: 2013, director: 'Gabriela Cowperthwaite' },
     { id: 'tt1286537', title: 'Food, Inc.', year: 2008, director: 'Robert Kenner' },
-    { id: 'tt7775622', title: 'Free Solo', year: 2018, director: 'Jimmy Chin, Elizabeth Chai Vasarhelyi' },
+    {
+      id: 'tt7775622',
+      title: 'Free Solo',
+      year: 2018,
+      director: 'Jimmy Chin, Elizabeth Chai Vasarhelyi',
+    },
   ],
   drama: [
     { id: 'tt0111161', title: 'The Shawshank Redemption', year: 1994, director: 'Frank Darabont' },
@@ -63,8 +117,18 @@ const CATALOG: Record<string, { id: string; title: string; year?: number; direct
     { id: 'tt7653254', title: 'Marriage Story', year: 2019, director: 'Noah Baumbach' },
   ],
   fantasia: [
-    { id: 'tt0241527', title: "Harry Potter and the Sorcerer's Stone", year: 2001, director: 'Chris Columbus' },
-    { id: 'tt0167260', title: 'The Lord of the Rings: The Return of the King', year: 2003, director: 'Peter Jackson' },
+    {
+      id: 'tt0241527',
+      title: "Harry Potter and the Sorcerer's Stone",
+      year: 2001,
+      director: 'Chris Columbus',
+    },
+    {
+      id: 'tt0167260',
+      title: 'The Lord of the Rings: The Return of the King',
+      year: 2003,
+      director: 'Peter Jackson',
+    },
     { id: 'tt0327597', title: 'Coraline', year: 2009, director: 'Henry Selick' },
     { id: 'tt1677720', title: 'Ready Player One', year: 2018, director: 'Steven Spielberg' },
     { id: 'tt2771200', title: 'Beauty and the Beast', year: 2017, director: 'Bill Condon' },
@@ -81,14 +145,24 @@ const CATALOG: Record<string, { id: string; title: string; year?: number; direct
     { id: 'tt0209144', title: 'Memento', year: 2000, director: 'Christopher Nolan' },
     { id: 'tt0482571', title: 'The Prestige', year: 2006, director: 'Christopher Nolan' },
     { id: 'tt2267998', title: 'Gone Girl', year: 2014, director: 'David Fincher' },
-    { id: 'tt1305806', title: 'The Secret in Their Eyes', year: 2009, director: 'Juan José Campanella' },
+    {
+      id: 'tt1305806',
+      title: 'The Secret in Their Eyes',
+      year: 2009,
+      director: 'Juan José Campanella',
+    },
   ],
   romance: [
     { id: 'tt3783958', title: 'La La Land', year: 2016, director: 'Damien Chazelle' },
     { id: 'tt0414387', title: 'Pride & Prejudice', year: 2005, director: 'Joe Wright' },
     { id: 'tt0112471', title: 'Before Sunrise', year: 1995, director: 'Richard Linklater' },
     { id: 'tt0332280', title: 'The Notebook', year: 2004, director: 'Nick Cassavetes' },
-    { id: 'tt0338013', title: 'Eternal Sunshine of the Spotless Mind', year: 2004, director: 'Michel Gondry' },
+    {
+      id: 'tt0338013',
+      title: 'Eternal Sunshine of the Spotless Mind',
+      year: 2004,
+      director: 'Michel Gondry',
+    },
   ],
   'ciencia-ficcion': [
     { id: 'tt1375666', title: 'Inception', year: 2010, director: 'Christopher Nolan' },
@@ -108,15 +182,56 @@ const CATALOG: Record<string, { id: string; title: string; year?: number; direct
 
 async function fetchCinemeta(imdbId: string) {
   try {
-    const res = await fetch(`https://v3-cinemeta.strem.io/meta/movie/${encodeURIComponent(imdbId)}.json`, {
-      signal: AbortSignal.timeout(4000),
-    });
+    const res = await fetch(
+      `https://v3-cinemeta.strem.io/meta/movie/${encodeURIComponent(imdbId)}.json`,
+      {
+        signal: AbortSignal.timeout(4000),
+      },
+    );
     if (!res.ok) return null;
-    const json = (await res.json()) as { meta?: { description?: string; poster?: string; year?: string; director?: string[] } };
+    const json = (await res.json()) as {
+      meta?: { description?: string; poster?: string; year?: string; director?: string[] };
+    };
     return json.meta || null;
   } catch {
     return null;
   }
+}
+
+interface CatalogMeta {
+  title?: string;
+  synopsis?: string | null;
+  posterUrl?: string | null;
+  director?: string | null;
+  releaseYear?: number | null;
+}
+
+/** Con TMDB: título y sinopsis en español. Sin TMDB: Cinemeta con la sinopsis traducida. */
+async function fetchCatalogMeta(imdbId: string, translate: boolean): Promise<CatalogMeta | null> {
+  if (isTmdbEnabled()) {
+    try {
+      const found = (await tmdb.findByImdbId(imdbId)).movie_results[0];
+      if (found) {
+        const meta = await metaFromTmdbDetails(await tmdb.details(found.id));
+        return meta;
+      }
+    } catch (err) {
+      console.warn(`  TMDB falló para ${imdbId}: ${(err as Error).message}`);
+    }
+  }
+
+  const meta = await fetchCinemeta(imdbId);
+  if (!meta) return null;
+  const synopsis =
+    meta.description && translate
+      ? ((await translateText(meta.description)) ?? meta.description)
+      : meta.description;
+  return {
+    synopsis: synopsis ?? null,
+    posterUrl: meta.poster ?? null,
+    director: meta.director?.[0] ?? null,
+    releaseYear: meta.year ? Number.parseInt(meta.year, 10) || null : null,
+  };
 }
 
 async function main() {
@@ -135,7 +250,8 @@ async function main() {
   console.log(`  Géneros listos: ${GENRES.length}`);
 
   // 2. Usuarios
-  const passwordHash = await hashPassword('password');
+  // Contraseña compartida de las cuentas demo. Cambiala en .env si la base no es solo local.
+  const passwordHash = await hashPassword(process.env.SEED_DEMO_PASSWORD || 'password');
   const userRows = [];
   for (const u of DEMO_USERS) {
     const row = await prisma.user.upsert({
@@ -146,6 +262,9 @@ async function main() {
     userRows.push(row);
   }
   console.log(`  Usuarios demo: ${userRows.length}`);
+
+  for (const line of await upsertPersonalAccounts(prisma))
+    console.log(`  Cuenta personal: ${line}`);
 
   const normalUsers = userRows.filter((u) => u.role === 'USER');
   const adminUser = userRows.find((u) => u.role === 'ADMIN') || userRows[0]!;
@@ -160,13 +279,21 @@ async function main() {
     if (!genreId) continue;
 
     for (const item of list) {
-      const meta = await fetchCinemeta(item.id);
+      // Solo se traduce al crear la fila: re-ejecutar el seed no gasta cupo de MyMemory.
+      const existing = await prisma.movie.findUnique({
+        where: {
+          externalSource_externalId: { externalSource: 'nexohub_real', externalId: item.id },
+        },
+        select: { synopsis: true },
+      });
+      const meta = await fetchCatalogMeta(item.id, !existing?.synopsis);
 
-      const title = item.title;
-      const releaseYear = item.year ?? (meta?.year ? parseInt(meta.year, 10) : 2015);
-      const director = item.director ?? (meta?.director?.[0] || 'Director cinematográfico');
-      const synopsis = meta?.description || `Excelente obra del género cinematográfico. Recomendada para toda la comunidad cinéfila.`;
-      const posterUrl = meta?.poster || `https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80`;
+      const title = meta?.title ?? item.title;
+      const releaseYear = item.year ?? meta?.releaseYear ?? null;
+      const director = meta?.director ?? item.director ?? null;
+      const synopsis =
+        (existing?.synopsis && !isTmdbEnabled() ? existing.synopsis : meta?.synopsis) ?? null;
+      const posterUrl = meta?.posterUrl ?? null;
 
       const movie = await prisma.movie.upsert({
         where: {
@@ -211,7 +338,9 @@ async function main() {
           userId: reviewer.id,
           movieId: movie.id,
           rating,
-          content: `Una joya indiscutible de su género. Las actuaciones y la dirección de ${director} destacan de principio a fin. Totalmente recomendada.`,
+          content: director
+            ? `Una joya indiscutible de su género. Las actuaciones y la dirección de ${director} destacan de principio a fin. Totalmente recomendada.`
+            : 'Una joya indiscutible de su género. Las actuaciones destacan de principio a fin. Totalmente recomendada.',
         },
         update: {
           rating,
@@ -232,16 +361,20 @@ async function main() {
         });
       }
 
-      await prisma.reviewResponse.createMany({
-        data: [
-          {
+      // review_responses no tiene clave única: se evita duplicar la respuesta al re-ejecutar el seed.
+      const responder = otherUsers[0]!;
+      const alreadyAnswered = await prisma.reviewResponse.count({
+        where: { reviewId: review.id, userId: responder.id },
+      });
+      if (alreadyAnswered === 0) {
+        await prisma.reviewResponse.create({
+          data: {
             reviewId: review.id,
-            userId: otherUsers[0]!.id,
+            userId: responder.id,
             content: 'Totalmente de acuerdo con tu análisis. La cinematografía es brillante.',
           },
-        ],
-        skipDuplicates: true,
-      });
+        });
+      }
 
       // Recalcular métricas de la película
       const agg = await prisma.review.aggregate({
@@ -298,7 +431,10 @@ async function main() {
     });
   }
 
-  console.log(`Catálogo completo listo: ${movieCount} películas, ${reviewCount} reseñas con likes y respuestas.`);
+  console.log(
+    `Catálogo base listo: ${movieCount} películas, ${reviewCount} reseñas con likes y respuestas.`,
+  );
+  console.log('Para sumar películas actuales en español: npm run db:import-movies -w @nexohub/api');
 }
 
 main()

@@ -16,7 +16,7 @@ import { GENRES, type MovieDto } from '@nexohub/shared';
 import { MovieCard } from '../features/movies/MovieCard';
 import { apiClient } from '../lib/api-client';
 
-export function HomePage({ onOpenPropose }: { onOpenPropose: () => void }) {
+export function HomePage() {
   const { data: featuredMovies, isLoading } = useQuery({
     queryKey: ['movies', 'featured'],
     queryFn: async () => {
@@ -43,9 +43,9 @@ export function HomePage({ onOpenPropose }: { onOpenPropose: () => void }) {
   const { data: genresData } = useQuery({
     queryKey: ['movies', 'genres'],
     queryFn: async () => {
-      const res = await apiClient<{ data: Array<{ id: number; name: string; slug: string; moviesCount?: number }> }>(
-        '/movies/genres',
-      );
+      const res = await apiClient<{
+        data: Array<{ id: number; name: string; slug: string; moviesCount?: number }>;
+      }>('/movies/genres');
       return res.data;
     },
   });
@@ -133,11 +133,7 @@ export function HomePage({ onOpenPropose }: { onOpenPropose: () => void }) {
           <div className="lg:col-span-5 relative flex items-center justify-center">
             {/* Círculo resplandor en fondo */}
             <div className="absolute inset-0 bg-[#e94560]/15 rounded-full blur-3xl opacity-70 pointer-events-none" />
-            <img
-              src="/nexohub-logo.png"
-              alt="NexoHub Logo"
-              className="nexologo relative z-10"
-            />
+            <img src="/nexohub-logo.png" alt="NexoHub Logo" className="nexologo relative z-10" />
           </div>
         </div>
       </section>
@@ -234,9 +230,7 @@ export function HomePage({ onOpenPropose }: { onOpenPropose: () => void }) {
                 <h3 className="mb-1 text-xl font-bold text-[#f5f5f5] group-hover:text-[#e94560] transition-colors">
                   {g.name}
                 </h3>
-                <p className="text-[#a0a0a0] text-xs">
-                  Ver películas y reseñas de {g.name}.
-                </p>
+                <p className="text-[#a0a0a0] text-xs">Ver películas y reseñas de {g.name}.</p>
               </Link>
             ))}
           </div>
@@ -292,9 +286,7 @@ export function HomePage({ onOpenPropose }: { onOpenPropose: () => void }) {
       {/* ──────────────── 5. ÚNETE A LA COMUNIDAD (CTA SECTION) ──────────────── */}
       <section className="bg-[#e94560] py-20 px-4 sm:px-6 text-center">
         <div className="max-w-3xl mx-auto space-y-6">
-          <h2 className="text-3xl sm:text-4xl font-black text-white">
-            Únete a la Comunidad
-          </h2>
+          <h2 className="text-3xl sm:text-4xl font-black text-white">Únete a la Comunidad</h2>
           <p className="text-base sm:text-lg text-white/90">
             Comienza a compartir tus reseñas y construye tu reputación como crítico de cine.
           </p>

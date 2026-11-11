@@ -3,6 +3,17 @@ import { RATING_MAX, RATING_MIN } from '../constants/rules';
 
 export const movieGenreSlugSchema = z.string().trim().toLowerCase();
 
+/** `tmdb-603` (TMDB) o `tt0133093` (IMDb vía Cinemeta). */
+export const externalIdSchema = z
+  .string()
+  .trim()
+  .regex(/^(tmdb-\d{1,10}|tt\d{5,10})$/, 'Id externo no válido');
+
+const positiveId = z.coerce.number().int().positive('Id no válido');
+
+export const idParamSchema = z.object({ id: positiveId });
+export const movieIdParamSchema = z.object({ movieId: positiveId });
+
 export const createMovieSchema = z.object({
   title: z
     .string()
@@ -12,15 +23,15 @@ export const createMovieSchema = z.object({
   genreSlug: movieGenreSlugSchema.min(1, 'El género es obligatorio'),
   synopsis: z.string().trim().max(3000, 'La sinopsis es muy extensa').optional(),
   director: z.string().trim().max(255).optional(),
-  releaseYear: z
-    .coerce
+  releaseYear: z.coerce
     .number()
     .int('El año debe ser un número entero')
     .min(1888, 'Año no válido')
     .max(new Date().getFullYear() + 5, 'Año no válido')
     .optional(),
   posterUrl: z.string().url('URL de póster no válida').optional().or(z.literal('')),
-  imdbId: z.string().trim().optional(),
+  /** Id externo verificable (`tmdb-<id>` o `tt<id>` de IMDb). El servidor vuelve a consultar la fuente. */
+  externalId: externalIdSchema.optional(),
   initialReview: z
     .object({
       rating: z.coerce.number().int().min(1).max(5),
@@ -38,8 +49,7 @@ export const movieQuerySchema = z.object({
 });
 
 export const reviewSchema = z.object({
-  rating: z
-    .coerce
+  rating: z.coerce
     .number()
     .int()
     .min(RATING_MIN, `La calificación mínima es ${RATING_MIN}`)
@@ -65,4 +75,3 @@ export type CreateMovieInput = z.infer<typeof createMovieSchema>;
 export type MovieQueryInput = z.infer<typeof movieQuerySchema>;
 export type ReviewInput = z.infer<typeof reviewSchema>;
 export type ReviewResponseInput = z.infer<typeof reviewResponseSchema>;
-

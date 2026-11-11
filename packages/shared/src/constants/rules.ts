@@ -18,10 +18,13 @@ export const PASSWORD_MAX = 128;
 export const ALLOWED_EMAIL_DOMAINS = [
   'gmail.com',
   'hotmail.com',
+  'hotmail.com.ar',
   'live.com',
+  'live.com.ar',
   'outlook.com',
+  'outlook.com.ar',
   'yahoo.com',
+  'yahoo.com.ar',
   'icloud.com',
   'proton.me',
 ] as const;
-

@@ -55,8 +55,17 @@ export function Footer() {
 
         <div className="pt-6 border-t border-[#0f3460] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#a0a0a0]">
           <p>&copy; {new Date().getFullYear()} NexoHub. Todos los derechos reservados.</p>
-          <p className="flex items-center gap-1">
-            Hecho para la comunidad cinéfila
+          <p className="text-center sm:text-right">
+            Datos e imágenes de películas:{' '}
+            <a
+              href="https://www.themoviedb.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#01b4e4] hover:underline"
+            >
+              TMDB
+            </a>
+            . Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.
           </p>
         </div>
       </div>

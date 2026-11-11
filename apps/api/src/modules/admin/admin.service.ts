@@ -2,7 +2,8 @@ import type { Role } from '@prisma/client';
 import type { MovieDto } from '@nexohub/shared';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../utils/AppError';
-import { toAuthUser, toPublicUser } from '../users/users.mapper';
+import { toMovieDto } from '../movies/movies.mapper';
+import { toAuthUser } from '../users/users.mapper';
 
 export const adminService = {
   async listPendingMovies(): Promise<MovieDto[]> {
@@ -15,26 +16,7 @@ export const adminService = {
       },
     });
 
-    return movies.map((m) => ({
-      id: m.id,
-      title: m.title,
-      synopsis: m.synopsis,
-      director: m.director,
-      releaseYear: m.releaseYear,
-      posterUrl: m.posterUrl,
-      featured: m.featured,
-      status: m.status,
-      rejectionReason: m.rejectionReason,
-      ratingAvg: Number(m.ratingAvg),
-      reviewsCount: m.reviewsCount,
-      genre: {
-        id: m.genre.id,
-        name: m.genre.name,
-        slug: m.genre.slug,
-      },
-      proposedBy: m.proposedBy ? toPublicUser(m.proposedBy) : null,
-      createdAt: m.createdAt.toISOString(),
-    }));
+    return movies.map((m) => toMovieDto(m));
   },
 
   async approveMovie(movieId: number, moderatorId: number) {
@@ -108,4 +90,3 @@ export const adminService = {
     return toAuthUser(updated);
   },
 };
-

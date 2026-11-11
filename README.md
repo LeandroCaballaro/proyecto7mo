@@ -28,12 +28,29 @@ npm run dev:web     # Frontend en http://localhost:5173
 
 # Comandos de base de datos:
 npm run db:migrate  # Aplica migraciones pendientes
-npm run db:seed     # Siembra el catálogo completo (65 películas, géneros y usuarios demo)
+npm run db:seed     # Géneros, usuarios demo, cuentas personales y catálogo base (65 películas)
+npm run db:import-movies -w @nexohub/api                          # 240 películas actuales de TMDB en español
+npm run db:import-movies -w @nexohub/api -- --count 300 --years 5 # cantidad y antigüedad a medida
+npm run db:accounts -w @nexohub/api                               # solo crea/actualiza las cuentas personales
 
 # Tests y comprobación de tipos:
 npm run typecheck
 npm run test
 ```
+
+## Catálogo de películas
+
+| Fuente | Uso | Idioma | Requisito |
+| :--- | :--- | :--- | :--- |
+| TMDB | Importación masiva y buscador de "Proponer película" | `es-MX`, cae a otra variante de español | `TMDB_API_KEY` (gratis, uso no comercial, atribución en el footer) |
+| Cinemeta | Respaldo si no hay `TMDB_API_KEY` | Inglés | Ninguno |
+| MyMemory | Traduce al español las sinopsis que solo existen en inglés | en → es | Opcional `TRANSLATE_EMAIL` (sube el cupo de 5.000 a 50.000 caracteres/día) |
+
+Clave de TMDB: crear cuenta en themoviedb.org → Configuración → API → solicitar clave de desarrollador. Pegar la API key (v3) o el token de lectura (v4) en `TMDB_API_KEY` de `apps/api/.env`.
+
+## Cuentas personales
+
+Se definen en `apps/api/.env` (`SUPERADMIN_*` y `TEST_USER_*`) y se crean con `npm run db:seed` o `npm run db:accounts -w @nexohub/api`. La contraseña debe tener 8+ caracteres, mayúscula, minúscula y número. Las cuentas demo usan `SEED_DEMO_PASSWORD` (por defecto `password`).
 
 ## Autenticación
 

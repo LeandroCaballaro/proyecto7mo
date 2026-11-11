@@ -1,6 +1,7 @@
 import type { MovieDto, UpdateProfileInput } from '@nexohub/shared';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../utils/AppError';
+import { toMovieDto } from '../movies/movies.mapper';
 import { toAuthUser, toPublicUser } from './users.mapper';
 
 export const usersService = {
@@ -23,7 +24,7 @@ export const usersService = {
     let favorites: MovieDto[] = [];
     if (user.isPublic) {
       const favRows = await prisma.favoriteMovie.findMany({
-        where: { userId: user.id },
+        where: { userId: user.id, movie: { status: 'APPROVED' } },
         include: {
           movie: {
             include: { genre: true },
@@ -32,26 +33,7 @@ export const usersService = {
         orderBy: { createdAt: 'desc' },
       });
 
-      favorites = favRows.map((f) => ({
-        id: f.movie.id,
-        title: f.movie.title,
-        synopsis: f.movie.synopsis,
-        director: f.movie.director,
-        releaseYear: f.movie.releaseYear,
-        posterUrl: f.movie.posterUrl,
-        featured: f.movie.featured,
-        status: f.movie.status,
-        rejectionReason: f.movie.rejectionReason,
-        ratingAvg: Number(f.movie.ratingAvg),
-        reviewsCount: f.movie.reviewsCount,
-        genre: {
-          id: f.movie.genre.id,
-          name: f.movie.genre.name,
-          slug: f.movie.genre.slug,
-        },
-        isFavorite: true,
-        createdAt: f.movie.createdAt.toISOString(),
-      }));
+      favorites = favRows.map((f) => toMovieDto(f.movie, { isFavorite: true }));
     }
 
     return {
@@ -185,26 +167,7 @@ export const usersService = {
       orderBy: { createdAt: 'desc' },
     });
 
-    return favs.map((f) => ({
-      id: f.movie.id,
-      title: f.movie.title,
-      synopsis: f.movie.synopsis,
-      director: f.movie.director,
-      releaseYear: f.movie.releaseYear,
-      posterUrl: f.movie.posterUrl,
-      featured: f.movie.featured,
-      status: f.movie.status,
-      rejectionReason: f.movie.rejectionReason,
-      ratingAvg: Number(f.movie.ratingAvg),
-      reviewsCount: f.movie.reviewsCount,
-      genre: {
-        id: f.movie.genre.id,
-        name: f.movie.genre.name,
-        slug: f.movie.genre.slug,
-      },
-      isFavorite: true,
-      createdAt: f.movie.createdAt.toISOString(),
-    }));
+    return favs.map((f) => toMovieDto(f.movie, { isFavorite: true }));
   },
 
   async addFavorite(userId: number, movieId: number) {
