@@ -1,29 +1,7 @@
 <?php
 session_start();
 
-define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
-
-function api_get($route, $extra = [])
-{
-    $url = API_URL . '?' . http_build_query(array_merge(['route' => $route], $extra));
-    $ctx = stream_context_create(['http' => ['ignore_errors' => true]]);
-    $raw = @file_get_contents($url, false, $ctx);
-    return $raw ? json_decode($raw, true) : null;
-}
-
-function api_post($route, $data)
-{
-    $ctx = stream_context_create([
-        'http' => [
-            'method'        => 'POST',
-            'header'        => "Content-Type: application/json\r\n",
-            'content'       => json_encode($data),
-            'ignore_errors' => true,   // leer respuesta aunque sea 4xx/5xx
-        ],
-    ]);
-    $raw = @file_get_contents(API_URL . '?route=' . urlencode($route), false, $ctx);
-    return $raw ? json_decode($raw, true) : null;
-}
+require_once __DIR__ . '/api_helper.php';
 
 $authError = '';
 if (isset($_GET['logout'])) {
@@ -58,7 +36,8 @@ $showRegistro = isset($_GET['registro']);
     <title>NexoHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="assets/css/styles.css" rel="stylesheet">
-    <link rel="icon" href="/proyecto7mo/Frontend/public/nhlogo.png" type="image/png"></head>
+    <link rel="icon" href="/proyecto7mo/Frontend/public/nhlogo.png" type="image/png">
+</head>
 <body>
     <?php include 'components/header.php'; ?>
 

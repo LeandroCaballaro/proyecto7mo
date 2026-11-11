@@ -3,6 +3,7 @@ $user = $_SESSION['user'] ?? null;
 $userPhoto = $user['profile_image'] ?? null;
 $userInitial = $user ? mb_strtoupper(mb_substr($user['name'], 0, 1, 'UTF-8')) : '';
 
+if (!function_exists('profile_image_url')) {
 function profile_image_url(?string $path): ?string
 {
     $path = trim((string) $path);
@@ -19,6 +20,7 @@ function profile_image_url(?string $path): ?string
     }
 
     return '/proyecto7mo/' . ltrim($path, '/');
+}
 }
 
 require_once __DIR__ . '/../../Backend/models/Database.php';

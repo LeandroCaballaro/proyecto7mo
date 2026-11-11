@@ -6,21 +6,7 @@ if (!empty($_SESSION['user'])) {
     exit;
 }
 
-define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
-
-function api_post($route, $data)
-{
-    $ctx = stream_context_create([
-        'http' => [
-            'method'        => 'POST',
-            'header'        => "Content-Type: application/json\r\n",
-            'content'       => json_encode($data),
-            'ignore_errors' => true,
-        ],
-    ]);
-    $raw = @file_get_contents(API_URL . '?route=' . urlencode($route), false, $ctx);
-    return $raw ? json_decode($raw, true) : null;
-}
+require_once __DIR__ . '/api_helper.php';
 
 $authError = '';
 

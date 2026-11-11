@@ -1,32 +1,6 @@
 <?php
 session_start();
-define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
-require_once __DIR__ . '/../Backend/models/Database.php';
-require_once __DIR__ . '/../Backend/services/MovieService.php';
-
-function api_get($route, $extra = [])
-{
-    $url = API_URL . '?' . http_build_query(array_merge(['route' => $route], $extra));
-    $ctx = stream_context_create(['http' => ['ignore_errors' => true]]);
-    $raw = @file_get_contents($url, false, $ctx);
-    return $raw ? json_decode($raw, true) : null;
-}
-
-function api_post($route, $data, $token = null)
-{
-    $h = "Content-Type: application/json\r\n";
-    if ($token) {
-        $h .= "Authorization: Bearer $token\r\n";
-    }
-    $ctx = stream_context_create(['http' => [
-        'method'        => 'POST',
-        'header'        => $h,
-        'content'       => json_encode($data),
-        'ignore_errors' => true,
-    ]]);
-    $raw = @file_get_contents(API_URL . '?route=' . urlencode($route), false, $ctx);
-    return $raw ? json_decode($raw, true) : null;
-}
+require_once __DIR__ . '/api_helper.php';
 
 function json_response(array $payload, int $statusCode = 200): void
 {

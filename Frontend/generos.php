@@ -1,13 +1,6 @@
 <?php
 session_start();
-define('API_URL', 'http://localhost/proyecto7mo/Backend/public/api.php');
-
-function api_get($route, $extra = [])
-{
-    $url = API_URL . '?' . http_build_query(array_merge(['route' => $route], $extra));
-    $raw = @file_get_contents($url);
-    return $raw ? json_decode($raw, true) : null;
-}
+require_once __DIR__ . '/api_helper.php';
 
 $genres = api_get('movies/genres') ?: [];
 $movies = api_get('movies') ?: [];

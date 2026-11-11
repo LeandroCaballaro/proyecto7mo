@@ -9,7 +9,18 @@ class Database
     {
         $cfg = require __DIR__ . '/../config/config.php';
         $dsn = "mysql:host={$cfg['host']};dbname={$cfg['dbname']};charset={$cfg['charset']}";
-        $this->pdo = new PDO($dsn, $cfg['user'], $cfg['pass']);
+        try {
+            $this->pdo = new PDO($dsn, $cfg['user'], $cfg['pass']);
+        } catch (PDOException $e) {
+            if ($e->getCode() == 1049 || strpos($e->getMessage(), '1049') !== false) {
+                $rootPdo = new PDO("mysql:host={$cfg['host']};charset={$cfg['charset']}", $cfg['user'], $cfg['pass']);
+                $rootPdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $rootPdo->exec("CREATE DATABASE IF NOT EXISTS \`{$cfg['dbname']}\\ CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+                $this->pdo = new PDO($dsn, $cfg['user'], $cfg['pass']);
+            } else {
+                throw $e;
+            }
+        }
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->ensureSchema();
     }
