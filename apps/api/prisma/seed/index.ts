@@ -2,8 +2,11 @@ import { PrismaClient, type Role } from '@prisma/client';
 import { GENRES, LIKES_PER_POINT } from '@nexohub/shared';
 import { hashPassword } from '../../src/lib/password';
 import { isTmdbEnabled, tmdb } from '../../src/lib/tmdb';
-import { translateText } from '../../src/lib/translator';
-import { metaFromTmdbDetails } from '../../src/modules/movies/external.service';
+import {
+  cinemetaPoster,
+  metaFromTmdbDetails,
+  toSpanish,
+} from '../../src/modules/movies/external.service';
 import { upsertPersonalAccounts } from './accounts';
 
 const prisma = new PrismaClient();
@@ -200,21 +203,19 @@ async function fetchCinemeta(imdbId: string) {
 
 interface CatalogMeta {
   title?: string;
-  synopsis?: string | null;
-  posterUrl?: string | null;
-  director?: string | null;
-  releaseYear?: number | null;
+  synopsis: string | null;
+  synopsisLang: 'es' | 'en' | null;
+  posterUrl: string | null;
+  director: string | null;
+  releaseYear: number | null;
 }
 
-/** Con TMDB: título y sinopsis en español. Sin TMDB: Cinemeta con la sinopsis traducida. */
+/** Con TMDB: título y sinopsis en español. Sin TMDB: Cinemeta, traduciendo si `translate`. */
 async function fetchCatalogMeta(imdbId: string, translate: boolean): Promise<CatalogMeta | null> {
   if (isTmdbEnabled()) {
     try {
       const found = (await tmdb.findByImdbId(imdbId)).movie_results[0];
-      if (found) {
-        const meta = await metaFromTmdbDetails(await tmdb.details(found.id));
-        return meta;
-      }
+      if (found) return await metaFromTmdbDetails(await tmdb.details(found.id));
     } catch (err) {
       console.warn(`  TMDB falló para ${imdbId}: ${(err as Error).message}`);
     }
@@ -222,13 +223,13 @@ async function fetchCatalogMeta(imdbId: string, translate: boolean): Promise<Cat
 
   const meta = await fetchCinemeta(imdbId);
   if (!meta) return null;
-  const synopsis =
-    meta.description && translate
-      ? ((await translateText(meta.description)) ?? meta.description)
-      : meta.description;
+  const synopsis = translate
+    ? await toSpanish(meta.description)
+    : { text: meta.description ?? null, lang: meta.description ? ('en' as const) : null };
   return {
-    synopsis: synopsis ?? null,
-    posterUrl: meta.poster ?? null,
+    synopsis: synopsis.text,
+    synopsisLang: synopsis.lang,
+    posterUrl: cinemetaPoster(meta.poster),
     director: meta.director?.[0] ?? null,
     releaseYear: meta.year ? Number.parseInt(meta.year, 10) || null : null,
   };
@@ -279,20 +280,22 @@ async function main() {
     if (!genreId) continue;
 
     for (const item of list) {
-      // Solo se traduce al crear la fila: re-ejecutar el seed no gasta cupo de MyMemory.
+      // Si la sinopsis ya está guardada con su idioma, no se vuelve a traducir (ahorra cupo de MyMemory).
+      // Las que quedaron en inglés las completa `npm run db:import-movies`.
       const existing = await prisma.movie.findUnique({
         where: {
           externalSource_externalId: { externalSource: 'nexohub_real', externalId: item.id },
         },
-        select: { synopsis: true },
+        select: { synopsis: true, synopsisLang: true },
       });
-      const meta = await fetchCatalogMeta(item.id, !existing?.synopsis);
+      const keepSynopsis = Boolean(existing?.synopsis && existing.synopsisLang) && !isTmdbEnabled();
+      const meta = await fetchCatalogMeta(item.id, !keepSynopsis);
 
       const title = meta?.title ?? item.title;
       const releaseYear = item.year ?? meta?.releaseYear ?? null;
       const director = meta?.director ?? item.director ?? null;
-      const synopsis =
-        (existing?.synopsis && !isTmdbEnabled() ? existing.synopsis : meta?.synopsis) ?? null;
+      const synopsis = keepSynopsis ? existing!.synopsis : (meta?.synopsis ?? null);
+      const synopsisLang = keepSynopsis ? existing!.synopsisLang : (meta?.synopsisLang ?? null);
       const posterUrl = meta?.posterUrl ?? null;
 
       const movie = await prisma.movie.upsert({
@@ -308,6 +311,7 @@ async function main() {
           director,
           releaseYear,
           synopsis,
+          synopsisLang,
           posterUrl,
           externalSource: 'nexohub_real',
           externalId: item.id,
@@ -319,6 +323,7 @@ async function main() {
           director,
           releaseYear,
           synopsis,
+          synopsisLang,
           posterUrl,
           status: 'APPROVED',
         },

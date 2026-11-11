@@ -5,6 +5,7 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     setupFiles: ['tests/setup.ts'],
+    globalSetup: ['tests/global-setup.ts'],
     // Los tests de integración comparten una BD: se ejecutan en serie.
     fileParallelism: false,
     testTimeout: 20_000,

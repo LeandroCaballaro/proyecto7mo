@@ -75,6 +75,8 @@ model Movie {
   title          String  @db.VarChar(255)
   /// legacy: description
   synopsis       String? @db.Text
+  /// idioma de la sinopsis: 'es' o 'en' (pendiente de traducir)
+  synopsisLang   String? @map("synopsis_lang") @db.VarChar(5)
   /// legacy: movie_author
   director       String? @db.VarChar(255)
   /// legacy: year
@@ -113,6 +115,7 @@ model Movie {
   @@index([status, ratingAvg(sort: Desc), reviewsCount(sort: Desc)])
   @@index([title])
   @@index([proposedById])
+  @@index([synopsisLang])
   @@map("movies")
 }
 

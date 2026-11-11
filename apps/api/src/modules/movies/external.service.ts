@@ -17,10 +17,24 @@ import { genreSlugFromEnglish, genreSlugFromTmdb } from './external-genres';
 
 /**
  * Fuente externa de películas. TMDB si hay TMDB_API_KEY (datos en español);
- * si no, Cinemeta (sin clave, solo inglés, se traduce la sinopsis).
+ * si no, Cinemeta (sin clave, en inglés: la sinopsis se traduce con MyMemory).
  */
 
-const CINEMETA = 'https://v3-cinemeta.strem.io';
+export const CINEMETA_URL = 'https://v3-cinemeta.strem.io';
+
+export type SynopsisLang = 'es' | 'en';
+
+export interface SpanishText {
+  text: string | null;
+  /** 'en' = quedó en inglés porque se agotó el cupo de traducción; se reintenta más tarde. */
+  lang: SynopsisLang | null;
+  translated: boolean;
+}
+
+export type ResolvedMeta = ExternalMovieMeta & {
+  synopsisLang: SynopsisLang | null;
+  synopsisTranslated: boolean;
+};
 
 export function parseExternalId(externalId: string): { source: 'tmdb' | 'cinemeta'; id: string } {
   if (externalId.startsWith('tmdb-')) return { source: 'tmdb', id: externalId.slice(5) };
@@ -33,20 +47,25 @@ export function storageKeyOf(externalId: string) {
   return { externalSource: source === 'tmdb' ? 'tmdb' : 'imdb', externalId: id };
 }
 
-/** `translated`: la sinopsis venía solo en inglés y se tradujo con MyMemory. */
-async function spanishSynopsis(
-  details: TmdbMovieDetails,
-): Promise<{ text: string | null; translated: boolean }> {
-  const { text, isSpanish } = pickSpanishOverview(details);
-  if (!text || isSpanish) return { text, translated: false };
+/** Traduce al español si hay cupo; si no, devuelve el original marcado como 'en'. */
+export async function toSpanish(english: string | null | undefined): Promise<SpanishText> {
+  const text = english?.trim();
+  if (!text) return { text: null, lang: null, translated: false };
   const result = await translateText(text);
-  return { text: result ?? text, translated: result != null };
+  return result
+    ? { text: result, lang: 'es', translated: true }
+    : { text, lang: 'en', translated: false };
+}
+
+async function spanishSynopsis(details: TmdbMovieDetails): Promise<SpanishText> {
+  const { text, isSpanish } = pickSpanishOverview(details);
+  if (!text) return { text: null, lang: null, translated: false };
+  if (isSpanish) return { text, lang: 'es', translated: false };
+  return toSpanish(text);
 }
 
 /** Convierte el detalle de TMDB al formato interno, con sinopsis en español. */
-export async function metaFromTmdbDetails(
-  details: TmdbMovieDetails,
-): Promise<ExternalMovieMeta & { synopsisTranslated: boolean }> {
+export async function metaFromTmdbDetails(details: TmdbMovieDetails): Promise<ResolvedMeta> {
   const synopsis = await spanishSynopsis(details);
   return {
     externalId: `tmdb-${details.id}`,
@@ -59,37 +78,50 @@ export async function metaFromTmdbDetails(
     genres: details.genres.map((g) => g.name),
     genreSlug: genreSlugFromTmdb(details.genres.map((g) => g.id)),
     synopsis: synopsis.text,
+    synopsisLang: synopsis.lang,
     synopsisTranslated: synopsis.translated,
     externalRating: details.vote_count > 0 ? Math.round(details.vote_average * 10) / 10 : null,
     source: 'tmdb',
   };
 }
 
-async function fetchCinemeta<T>(path: string): Promise<T> {
-  const res = await fetch(`${CINEMETA}${path}`, {
+export async function fetchCinemeta<T>(path: string): Promise<T> {
+  // Algunos catálogos redirigen (302) a cinemeta-catalogs.strem.io: fetch sigue la redirección.
+  const res = await fetch(`${CINEMETA_URL}${path}`, {
     headers: { 'User-Agent': 'NexoHub/2.0' },
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Cinemeta respondió ${res.status}`);
   return (await res.json()) as T;
 }
 
-interface CinemetaMeta {
+export interface CinemetaMeta {
   id: string;
   name: string;
   description?: string;
   poster?: string;
-  year?: string;
+  year?: string | number;
   releaseInfo?: string;
+  released?: string;
   director?: string[] | string;
   genres?: string[];
   imdbRating?: string;
 }
 
-const parseYear = (v?: string) => {
-  const n = v ? Number.parseInt(v, 10) : Number.NaN;
+export const parseYear = (v?: string | number) => {
+  const n = typeof v === 'number' ? v : v ? Number.parseInt(v, 10) : Number.NaN;
   return Number.isFinite(n) ? n : null;
 };
+
+export const directorFromCinemeta = (m: CinemetaMeta) =>
+  (Array.isArray(m.director) ? m.director.join(', ') : m.director) || null;
+
+/** Cinemeta devuelve el póster "small" en los catálogos; "medium" se ve bien en las tarjetas. */
+export const cinemetaPoster = (url?: string) =>
+  url ? url.replace('/poster/small/', '/poster/medium/') : null;
+
+const unavailable = () =>
+  new AppError(502, 'EXTERNAL_UNAVAILABLE', 'El servicio externo de películas no respondió');
 
 export const externalMovies = {
   async search(query: string): Promise<ExternalMovieResult[]> {
@@ -117,20 +149,16 @@ export const externalMovies = {
         title: m.name,
         originalTitle: null,
         releaseYear: parseYear(m.releaseInfo),
-        posterUrl: m.poster || null,
+        posterUrl: cinemetaPoster(m.poster),
         description: m.description || null,
       }));
     } catch (err) {
       logger.warn({ err }, 'Falló la búsqueda externa de películas');
-      throw new AppError(
-        502,
-        'EXTERNAL_UNAVAILABLE',
-        'El servicio externo de películas no respondió',
-      );
+      throw unavailable();
     }
   },
 
-  async getMeta(externalId: string): Promise<ExternalMovieMeta> {
+  async getMeta(externalId: string): Promise<ResolvedMeta> {
     const { source, id } = parseExternalId(externalId);
 
     if (source === 'tmdb') {
@@ -138,10 +166,11 @@ export const externalMovies = {
       try {
         return await metaFromTmdbDetails(await tmdb.details(Number(id)));
       } catch (err) {
-        if (err instanceof TmdbError && err.status === 404)
+        if (err instanceof TmdbError && err.status === 404) {
           throw AppError.notFound('Película no encontrada en TMDB');
+        }
         logger.warn({ err }, 'Falló la consulta a TMDB');
-        throw new AppError(502, 'EXTERNAL_UNAVAILABLE', 'TMDB no respondió');
+        throw unavailable();
       }
     }
 
@@ -152,29 +181,26 @@ export const externalMovies = {
       ).meta;
     } catch (err) {
       logger.warn({ err }, 'Falló la consulta a Cinemeta');
-      throw new AppError(
-        502,
-        'EXTERNAL_UNAVAILABLE',
-        'El servicio externo de películas no respondió',
-      );
+      throw unavailable();
     }
     if (!m) throw AppError.notFound('Película no encontrada');
 
     const genres = Array.isArray(m.genres) ? m.genres : [];
-    const director = Array.isArray(m.director) ? m.director.join(', ') : m.director || null;
-    const synopsis = m.description ? ((await translateText(m.description)) ?? m.description) : null;
+    const synopsis = await toSpanish(m.description);
 
     return {
       externalId: m.id,
       title: m.name,
       originalTitle: m.name,
       releaseYear: parseYear(m.year) ?? parseYear(m.releaseInfo),
-      posterUrl: m.poster || null,
+      posterUrl: cinemetaPoster(m.poster),
       description: m.description || null,
-      director,
+      director: directorFromCinemeta(m),
       genres,
       genreSlug: genreSlugFromEnglish(genres),
-      synopsis,
+      synopsis: synopsis.text,
+      synopsisLang: synopsis.lang,
+      synopsisTranslated: synopsis.translated,
       externalRating: m.imdbRating ? Number(m.imdbRating) || null : null,
       source: 'cinemeta',
     };

@@ -39,12 +39,16 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional().default(''),
   MAIL_FROM: z.string().default('NexoHub <no-reply@nexohub.local>'),
 
-  /** API key v3 o token de lectura v4 de TMDB. Vacío = se usa Cinemeta (solo inglés). */
+  /** API key v3 o token de lectura v4 de TMDB. Vacío = se usa Cinemeta (en inglés, se traduce). */
   TMDB_API_KEY: z.string().trim().optional().default(''),
   /** Idioma principal pedido a TMDB. es-MX tiene la mejor cobertura para Latinoamérica. */
   TMDB_LANGUAGE: z.string().trim().default('es-MX'),
   /** Email para MyMemory: sube el cupo gratuito de traducción de 5.000 a 50.000 caracteres/día. */
   TRANSLATE_EMAIL: z.string().trim().optional().default(''),
+  /** Películas nuevas a importar por día desde el servidor (0 = desactivado). */
+  AUTO_IMPORT_MOVIES: z.coerce.number().int().min(0).max(200).default(0),
+  /** Años hacia atrás que recorre la importación automática. */
+  AUTO_IMPORT_YEARS: z.coerce.number().int().min(1).max(10).default(2),
 });
 
 const parsed = envSchema.safeParse(process.env);

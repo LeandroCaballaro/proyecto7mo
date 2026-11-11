@@ -150,6 +150,7 @@ export const moviesService = {
           title,
           genreId: genre.id,
           synopsis: verified?.synopsis ?? input.synopsis ?? null,
+          synopsisLang: verified ? verified.synopsisLang : input.synopsis ? 'es' : null,
           director: verified?.director ?? input.director ?? null,
           releaseYear,
           posterUrl: verified?.posterUrl ?? (input.posterUrl || null),

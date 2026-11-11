@@ -1,7 +1,16 @@
-import { Film, Heart, Shield, Sparkles } from 'lucide-react';
+import { Film, Shield, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../../lib/api-client';
 
 export function Footer() {
+  const { data: movieSource } = useQuery({
+    queryKey: ['config', 'movieSource'],
+    queryFn: async () =>
+      (await apiClient<{ data: { movieSource: 'tmdb' | 'cinemeta' } }>('/config')).data.movieSource,
+    staleTime: Infinity,
+  });
+
   return (
     <footer className="w-full border-t border-[#0f3460] bg-[#1a1a2e] py-12 mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -55,18 +64,24 @@ export function Footer() {
 
         <div className="pt-6 border-t border-[#0f3460] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#a0a0a0]">
           <p>&copy; {new Date().getFullYear()} NexoHub. Todos los derechos reservados.</p>
-          <p className="text-center sm:text-right">
-            Datos e imágenes de películas:{' '}
-            <a
-              href="https://www.themoviedb.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-[#01b4e4] hover:underline"
-            >
-              TMDB
-            </a>
-            . Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.
-          </p>
+          {movieSource === 'tmdb' ? (
+            <p className="text-center sm:text-right">
+              Datos e imágenes de películas:{' '}
+              <a
+                href="https://www.themoviedb.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[#01b4e4] hover:underline"
+              >
+                TMDB
+              </a>
+              . Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.
+            </p>
+          ) : (
+            <p className="text-center sm:text-right">
+              Datos de películas: Cinemeta (IMDb). Sinopsis traducidas con MyMemory.
+            </p>
+          )}
         </div>
       </div>
     </footer>

@@ -1,8 +1,9 @@
 import { createApp } from './app';
-import { env } from './config/env';
+import { env, isTest } from './config/env';
 import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 import { authRepository } from './modules/auth/auth.repository';
+import { scheduleDailyImport } from './modules/movies/catalog-import.service';
 
 const app = createApp();
 
@@ -22,6 +23,14 @@ const cleanup = setInterval(
 );
 cleanup.unref();
 
+const importTimer =
+  env.AUTO_IMPORT_MOVIES > 0 && !isTest
+    ? scheduleDailyImport(env.AUTO_IMPORT_MOVIES, env.AUTO_IMPORT_YEARS)
+    : undefined;
+if (importTimer) {
+  logger.info(`Importación automática: ${env.AUTO_IMPORT_MOVIES} películas nuevas por día`);
+}
+
 let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
@@ -29,6 +38,7 @@ async function shutdown(signal: string) {
   logger.info(`${signal} recibido, cerrando servidor...`);
 
   clearInterval(cleanup);
+  if (importTimer) clearInterval(importTimer);
   server.close(async () => {
     await prisma.$disconnect();
     logger.info('Servidor cerrado');

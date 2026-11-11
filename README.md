@@ -29,8 +29,8 @@ npm run dev:web     # Frontend en http://localhost:5173
 # Comandos de base de datos:
 npm run db:migrate  # Aplica migraciones pendientes
 npm run db:seed     # Géneros, usuarios demo, cuentas personales y catálogo base (65 películas)
-npm run db:import-movies -w @nexohub/api                          # 240 películas actuales de TMDB en español
-npm run db:import-movies -w @nexohub/api -- --count 300 --years 5 # cantidad y antigüedad a medida
+npm run db:import-movies -w @nexohub/api                          # 40 películas nuevas (año actual y anterior)
+npm run db:import-movies -w @nexohub/api -- --count 100 --years 3 # cantidad y antigüedad a medida
 npm run db:accounts -w @nexohub/api                               # solo crea/actualiza las cuentas personales
 
 # Tests y comprobación de tipos:
@@ -40,13 +40,17 @@ npm run test
 
 ## Catálogo de películas
 
-| Fuente | Uso | Idioma | Requisito |
-| :--- | :--- | :--- | :--- |
-| TMDB | Importación masiva y buscador de "Proponer película" | `es-MX`, cae a otra variante de español | `TMDB_API_KEY` (gratis, uso no comercial, atribución en el footer) |
-| Cinemeta | Respaldo si no hay `TMDB_API_KEY` | Inglés | Ninguno |
-| MyMemory | Traduce al español las sinopsis que solo existen en inglés | en → es | Opcional `TRANSLATE_EMAIL` (sube el cupo de 5.000 a 50.000 caracteres/día) |
+El catálogo crece de a poco con las películas más recientes que todavía no están en la base.
 
-Clave de TMDB: crear cuenta en themoviedb.org → Configuración → API → solicitar clave de desarrollador. Pegar la API key (v3) o el token de lectura (v4) en `TMDB_API_KEY` de `apps/api/.env`.
+| Fuente | Uso | Requisito |
+| :--- | :--- | :--- |
+| Cinemeta | Importación (catálogo "New" por año) y buscador de "Proponer película" | Ninguno |
+| MyMemory | Traduce las sinopsis al español | Ninguno. Cupo gratis: 5.000 caracteres/día (50.000 con `TRANSLATE_EMAIL`) |
+| TMDB (opcional) | Reemplaza a Cinemeta si hay `TMDB_API_KEY`: títulos y sinopsis ya en español | Clave gratuita de themoviedb.org |
+
+- Cada corrida primero traduce las sinopsis que quedaron en inglés y después suma películas nuevas.
+- Si se agota el cupo de traducción, las sinopsis nuevas quedan en inglés (`synopsis_lang = 'en'`) y se traducen en la corrida siguiente.
+- Importación automática: con `AUTO_IMPORT_MOVIES=20` en `apps/api/.env`, la API suma 20 películas por día mientras está levantada (primera corrida 1 minuto después de iniciar).
 
 ## Cuentas personales
 

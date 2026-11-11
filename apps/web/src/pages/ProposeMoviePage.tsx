@@ -48,7 +48,7 @@ export function ProposeMoviePage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Query: resultados de búsqueda en TMDB (o Cinemeta si no hay clave)
+  // Query: resultados de búsqueda externa (Cinemeta, o TMDB si el servidor tiene clave)
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['external-movies-search', debouncedSearch],
     queryFn: async () => {
@@ -174,21 +174,21 @@ export function ProposeMoviePage() {
           Reseñar Película Fuera de Catálogo
         </h1>
         <p className="text-sm text-[#a0a0a0] mt-2 max-w-2xl leading-relaxed">
-          ¿La película que deseas calificar no está en NexoHub? Búscala en la base de datos de TMDB.
+          ¿La película que deseas calificar no está en NexoHub? Búscala en el catálogo externo de películas.
           La información (póster oficial, director, año y sinopsis) se verificará automáticamente
           para garantizar la legitimidad del catálogo.
         </p>
       </header>
 
       {/* ========================================================= */}
-      {/* PASO 1: BUSCADOR EN VIVO (TMDB)                           */}
+      {/* PASO 1: BUSCADOR EN VIVO                                  */}
       {/* ========================================================= */}
       {!selectedExternalId && (
         <section className="bg-[#16213e] border border-[#0f3460] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
           <div className="space-y-2">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Search className="h-5 w-5 text-[#e94560]" />
-              Paso 1: Busca la película en la base de datos de TMDB
+              Paso 1: Busca la película en el catálogo externo
             </h2>
             <p className="text-xs text-[#a0a0a0]">
               Escribe el título exacto o una palabra clave en español o en su idioma original.

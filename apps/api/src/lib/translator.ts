@@ -4,14 +4,21 @@ import { logger } from './logger';
 /**
  * Traducción inglés -> español con MyMemory (gratis, sin registro).
  * Cupo: 5.000 caracteres/día por IP, o 50.000 si se envía TRANSLATE_EMAIL.
- * Si se agota el cupo, deja de intentar hasta reiniciar el proceso y devuelve null.
+ * Si se agota el cupo devuelve null y no vuelve a intentar hasta el día siguiente.
  */
 
 const ENDPOINT = 'https://api.mymemory.translated.net/get';
 /** MyMemory rechaza consultas de más de 500 bytes. */
 const MAX_CHUNK_BYTES = 450;
 
-let quotaExhausted = false;
+/** Día (UTC) en que se agotó el cupo; al día siguiente se vuelve a intentar. */
+let exhaustedOn: string | null = null;
+const today = () => new Date().toISOString().slice(0, 10);
+
+export function isTranslationQuotaExhausted(): boolean {
+  if (exhaustedOn && exhaustedOn !== today()) exhaustedOn = null;
+  return exhaustedOn !== null;
+}
 
 function splitIntoChunks(text: string): string[] {
   const sentences = text.match(/[^.!?]+[.!?]*\s*/g) ?? [text];
@@ -64,7 +71,7 @@ async function translateChunk(chunk: string, from: string, to: string): Promise<
     Number(json.responseStatus) === 429 ||
     text.startsWith('MYMEMORY WARNING')
   ) {
-    quotaExhausted = true;
+    exhaustedOn = today();
     logger.warn('Cupo diario de MyMemory agotado: las sinopsis restantes quedan en inglés');
     return null;
   }
@@ -74,7 +81,7 @@ async function translateChunk(chunk: string, from: string, to: string): Promise<
 
 export async function translateText(text: string, from = 'en', to = 'es'): Promise<string | null> {
   const clean = text.trim();
-  if (!clean || quotaExhausted) return null;
+  if (!clean || isTranslationQuotaExhausted()) return null;
 
   try {
     const parts: string[] = [];

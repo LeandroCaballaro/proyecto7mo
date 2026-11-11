@@ -7,7 +7,13 @@ import {
   type TmdbMovieDetails,
 } from '../src/lib/tmdb';
 import { genreSlugFromEnglish, genreSlugFromTmdb } from '../src/modules/movies/external-genres';
-import { parseExternalId, storageKeyOf } from '../src/modules/movies/external.service';
+import {
+  cinemetaPoster,
+  directorFromCinemeta,
+  parseExternalId,
+  parseYear,
+  storageKeyOf,
+} from '../src/modules/movies/external.service';
 
 const base: TmdbMovieDetails = {
   id: 1,
@@ -83,5 +89,19 @@ describe('Ids externos', () => {
     expect(parseExternalId('tmdb-603')).toEqual({ source: 'tmdb', id: '603' });
     expect(storageKeyOf('tt0133093')).toEqual({ externalSource: 'imdb', externalId: 'tt0133093' });
     expect(storageKeyOf('tmdb-603')).toEqual({ externalSource: 'tmdb', externalId: '603' });
+  });
+});
+
+describe('Cinemeta', () => {
+  it('normaliza póster, año y director', () => {
+    expect(cinemetaPoster('https://images.metahub.space/poster/small/tt1/img')).toBe(
+      'https://images.metahub.space/poster/medium/tt1/img',
+    );
+    expect(cinemetaPoster(undefined)).toBeNull();
+    expect(parseYear('2025–')).toBe(2025);
+    expect(parseYear(2026)).toBe(2026);
+    expect(parseYear(undefined)).toBeNull();
+    expect(directorFromCinemeta({ id: 'tt1', name: 'X', director: ['A', 'B'] })).toBe('A, B');
+    expect(directorFromCinemeta({ id: 'tt1', name: 'X' })).toBeNull();
   });
 });
