@@ -1,109 +1,66 @@
-# NexoHub - Proyecto 7mo
+# NexoHub
 
-NexoHub es una plataforma PHP para explorar peliculas, escribir resenas, responder comentarios, marcar favoritas y administrar usuarios/peliculas desde un panel interno.
+Plataforma para explorar películas, escribir reseñas y gestionar favoritos. Monorepo TypeScript (Node + React).
+
+| Paquete | Descripción |
+| :--- | :--- |
+| `apps/api` | Express 5 + Prisma 6 (MySQL). API REST `/api/v1`. |
+| `apps/web` | React + Vite + Tailwind v4. |
+| `packages/shared` | Esquemas Zod, constantes y tipos DTO usados por cliente y servidor. |
 
 ## Requisitos
 
-- Laragon o stack equivalente con Apache/Nginx, PHP 8.x y MySQL/MariaDB.
-- Extension PDO MySQL habilitada.
-- Acceso a internet para ejecutar los seeds que consultan APIs externas.
+- Node.js 20.11 o superior
+- MySQL 8 / MariaDB (Laragon funciona tal cual)
 
-## Estructura principal
-
-```text
-proyecto7mo/
-|-- Backend/
-|   |-- config/          Configuracion de BD y variables .env
-|   |-- controllers/     Controladores HTTP de la API
-|   |-- database/        Schema y seeds
-|   |-- models/          Acceso a datos
-|   |-- public/          Entrada API: api.php
-|   `-- services/        Logica de autenticacion y peliculas
-|-- Frontend/
-|   |-- api/             Endpoints auxiliares usados por vistas
-|   |-- assets/css/      Estilos
-|   |-- components/      Header, footer y secciones reutilizables
-|   |-- public/          Imagenes publicas y posters
-|   |-- uploads/         Fotos de perfil subidas localmente
-|   `-- *.php            Paginas visibles
-`-- index.php            Entrada publica principal
-```
-
-## Configuracion local
-
-1. Colocar el proyecto en `C:\laragon\www\proyecto7mo`.
-2. Iniciar Laragon.
-3. Crear la base `proyecto7mo`.
-4. Importar el schema:
+## Puesta en marcha
 
 ```powershell
-mysql -u root proyecto7mo < Backend/database/001_schema.sql
+npm install
+copy apps\api\.env.example apps\api\.env   # completar DATABASE_URL y secretos
+
+# Levantar el Backend (API) y el Frontend (Web) simultáneamente:
+npm run dev
+
+# O si prefieres levantarlos por separado:
+npm run dev:api     # Backend en http://localhost:4000/api/v1
+npm run dev:web     # Frontend en http://localhost:5173
+
+# Comandos de base de datos:
+npm run db:migrate  # Aplica migraciones pendientes
+npm run db:seed     # Siembra el catálogo completo (65 películas, géneros y usuarios demo)
+
+# Tests y comprobación de tipos:
+npm run typecheck
+npm run test
 ```
 
-5. Cargar usuarios demo:
+## Autenticación
 
-```powershell
-mysql -u root proyecto7mo < Backend/database/002_seed_users.sql
+| Método | Ruta | Auth | Descripción |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/v1/auth/register` | No | Crea la cuenta e inicia sesión |
+| POST | `/api/v1/auth/login` | No | `identifier` (email o usuario) + `password` |
+| POST | `/api/v1/auth/refresh` | Cookie refresh | Rota el refresh token |
+| POST | `/api/v1/auth/logout` | No | Revoca el refresh token actual |
+| POST | `/api/v1/auth/logout-all` | Sí | Cierra todas las sesiones |
+| GET | `/api/v1/auth/me` | Sí | Usuario actual |
+| POST | `/api/v1/auth/forgot-password` | No | Envía el enlace de recuperación |
+| POST | `/api/v1/auth/reset-password` | No | `token` + nueva contraseña |
+| POST | `/api/v1/auth/change-password` | Sí | Cambia la contraseña y cierra las demás sesiones |
+
+- Access token JWT (15 min) en la cookie `nh_at`. Refresh token opaco (7 días) en la cookie `nh_rt`, restringida a `/api/v1/auth`. Ambas son `httpOnly` y `SameSite=Lax`.
+- El refresh token se guarda hasheado (SHA-256). Si se reutiliza un token ya rotado, se revoca toda su familia.
+- Los hashes bcrypt legacy (`$2y$`) se aceptan y se convierten a argon2id en el primer login.
+
+### Formato de errores
+
+```json
+{ "error": { "code": "VALIDATION_ERROR", "message": "Datos inválidos", "details": [{ "path": "body.email", "message": "..." }] } }
 ```
 
-6. Cargar el catalogo real recomendado:
+## Lineamientos de UI (frontend)
 
-```powershell
-php Backend/database/005_seed_full_catalog.php
-```
+- Componentes propios y reutilizables en `apps/web/src/components/ui`. No se usan los controles nativos del navegador cuando hay una versión propia: Combobox, Select, DatePicker y YearPicker, RatingInput, FileDropzone, Tabs, Dialog, Drawer, Toast, Tooltip, Pagination y Skeleton.
+- Sin emojis en la interfaz, en los textos ni en el código. Para los iconos se usa solo `lucide-react`.
 
-Entrada web:
-
-```text
-http://localhost/proyecto7mo/index.php
-```
-
-## Seeds recomendados
-
-El seed principal es `Backend/database/005_seed_full_catalog.php`.
-
-Ese seed carga 65 peliculas reales, 5 por cada genero del proyecto, usando IDs de IMDb y metadata de Cinemeta. Tambien crea 1 resena principal, 3 comentarios y corazones por pelicula para que el ranking y la actividad tengan datos desde el inicio.
-
-El seed reemplaza automaticamente los datos demo anteriores de `external_source = 'nexohub_seed'` y `external_source = 'nexohub_real'`. No borra peliculas creadas por usuarios ni peliculas de otras fuentes.
-
-Los scripts `003_seed_movies_from_api.php` y `004_seed_reviews_for_api_movies.php` quedan disponibles como alternativa incremental, pero para dejar el proyecto completo y consistente conviene ejecutar `005_seed_full_catalog.php`.
-
-## Usuarios demo
-
-Todos usan contrasena:
-
-```text
-password
-```
-
-- `admin` o `admin@nexohub.local`: administrador normal.
-- `superadmin` o `superadmin@nexohub.local`: puede gestionar cuentas administradoras.
-- `carlosp`, `anagomez`, `marial`: usuarios normales.
-
-El login acepta correo o nombre de usuario.
-
-## API interna
-
-Entrada:
-
-```text
-http://localhost/proyecto7mo/Backend/public/api.php
-```
-
-Rutas utiles:
-
-```text
-GET  ?route=movies
-GET  ?route=movies/featured
-GET  ?route=movies/genres
-GET  ?route=movies/genre/{genero}
-GET  ?route=movies/{id}
-POST ?route=auth/login
-POST ?route=auth/register
-POST ?route=reviews
-POST ?route=reviews/{id}/responses
-```
-
-## Notas de almacenamiento
-
-Actualmente las fotos de perfil se guardan en `Frontend/uploads` y la BD guarda la URL publica. Para produccion conviene moverlas fuera del repositorio o usar un storage externo. Ver `Backend/README.md` para opciones.
