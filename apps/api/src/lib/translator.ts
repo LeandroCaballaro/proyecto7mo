@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import { env } from '../config/env';
 import { logger } from './logger';
+import { prisma } from './prisma';
 
 /**
  * Traducción inglés -> español con MyMemory (gratis, sin registro).
@@ -79,9 +81,42 @@ async function translateChunk(chunk: string, from: string, to: string): Promise<
   return text;
 }
 
+const cacheKey = (text: string, from: string, to: string) =>
+  createHash('sha256').update(`${from}|${to}|${text}`).digest('hex');
+
+async function readCache(hash: string): Promise<string | null> {
+  try {
+    const hit = await prisma.translationCache.findUnique({ where: { hash } });
+    return hit?.translated ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(hash: string, langPair: string, translated: string) {
+  try {
+    await prisma.translationCache.upsert({
+      where: { hash },
+      create: { hash, langPair, translated },
+      update: { translated },
+    });
+  } catch (err) {
+    logger.warn({ err }, 'No se pudo guardar la traducción en caché');
+  }
+}
+
+/**
+ * Traduce un texto. Primero busca en la caché de traducciones (instantáneo y sin gastar cupo);
+ * si no está, lo pide a MyMemory y guarda el resultado.
+ */
 export async function translateText(text: string, from = 'en', to = 'es'): Promise<string | null> {
   const clean = text.trim();
-  if (!clean || isTranslationQuotaExhausted()) return null;
+  if (!clean) return null;
+
+  const hash = cacheKey(clean, from, to);
+  const hit = await readCache(hash);
+  if (hit) return hit;
+  if (isTranslationQuotaExhausted()) return null;
 
   try {
     const parts: string[] = [];
@@ -90,7 +125,9 @@ export async function translateText(text: string, from = 'en', to = 'es'): Promi
       if (translated == null) return null;
       parts.push(translated);
     }
-    return parts.join(' ');
+    const result = parts.join(' ');
+    await writeCache(hash, `${from}|${to}`, result);
+    return result;
   } catch (err) {
     logger.warn({ err }, 'Falló la traducción automática');
     return null;

@@ -1,5 +1,6 @@
 import { createApp } from './app';
 import { env, isTest } from './config/env';
+import { pruneExpiredCache } from './lib/cache';
 import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 import { authRepository } from './modules/auth/auth.repository';
@@ -11,13 +12,18 @@ const server = app.listen(env.PORT, () => {
   logger.info(`API NexoHub escuchando en http://localhost:${env.PORT}/api/v1`);
 });
 
-// Limpieza periódica de refresh tokens vencidos (cada 6 h).
+// Limpieza periódica de refresh tokens y caché externa vencidos (cada 6 h).
 const cleanup = setInterval(
   () => {
     authRepository
       .deleteExpiredRefreshTokens(new Date())
-      .then(({ count }) => count > 0 && logger.info({ count }, 'Refresh tokens vencidos eliminados'))
+      .then(
+        ({ count }) => count > 0 && logger.info({ count }, 'Refresh tokens vencidos eliminados'),
+      )
       .catch((err) => logger.error({ err }, 'Fallo la limpieza de refresh tokens'));
+    pruneExpiredCache()
+      .then(({ count }) => count > 0 && logger.info({ count }, 'Caché externa vencida eliminada'))
+      .catch((err) => logger.error({ err }, 'Falló la limpieza de la caché externa'));
   },
   6 * 60 * 60 * 1000,
 );
@@ -51,5 +57,6 @@ async function shutdown(signal: string) {
 
 process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
-process.on('unhandledRejection', (reason) => logger.error({ reason }, 'Promesa rechazada sin manejar'));
-
+process.on('unhandledRejection', (reason) =>
+  logger.error({ reason }, 'Promesa rechazada sin manejar'),
+);

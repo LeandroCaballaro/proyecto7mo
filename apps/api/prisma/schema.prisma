@@ -247,3 +247,26 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+// ─────────────────────────────── Caché de servicios externos ───────────────────────────────
+
+/// Respuestas de Cinemeta/TMDB guardadas con vencimiento, para no repetir pedidos lentos.
+model ExternalCache {
+  key       String   @id @db.VarChar(191)
+  value     String   @db.LongText
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("external_cache")
+}
+
+/// Traducciones ya hechas: el mismo texto nunca se vuelve a pedir a MyMemory.
+model TranslationCache {
+  /// SHA-256 de "<origen>|<destino>|<texto>"
+  hash       String   @id @db.Char(64)
+  langPair   String   @map("lang_pair") @db.VarChar(10)
+  translated String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("translation_cache")
+}

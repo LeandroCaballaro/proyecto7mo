@@ -6,6 +6,7 @@ import {
   releaseYearOf,
   type TmdbMovieDetails,
 } from '../src/lib/tmdb';
+import { isValidCatalogEntry } from '../src/modules/movies/catalog-import.service';
 import { genreSlugFromEnglish, genreSlugFromTmdb } from '../src/modules/movies/external-genres';
 import {
   cinemetaPoster,
@@ -103,5 +104,28 @@ describe('Cinemeta', () => {
     expect(parseYear(undefined)).toBeNull();
     expect(directorFromCinemeta({ id: 'tt1', name: 'X', director: ['A', 'B'] })).toBe('A, B');
     expect(directorFromCinemeta({ id: 'tt1', name: 'X' })).toBeNull();
+  });
+});
+
+describe('Filtro del catálogo "New" de Cinemeta', () => {
+  const now = Date.parse('2026-11-11T12:00:00Z');
+  const base = { id: 'tt1', name: 'X', poster: 'p', description: 'd' };
+
+  it('descarta entradas cuyo año no coincide con el catálogo', () => {
+    expect(isValidCatalogEntry({ ...base, releaseInfo: '1938' }, 2026, now)).toBe(false);
+    expect(isValidCatalogEntry({ ...base, releaseInfo: '2022' }, 2025, now)).toBe(false);
+  });
+
+  it('descarta las que todavía no se estrenaron', () => {
+    expect(isValidCatalogEntry({ ...base, year: 2026, released: '2026-11-20T00:00:00Z' }, 2026, now)).toBe(false);
+  });
+
+  it('acepta estrenos ya publicados del año del catálogo', () => {
+    expect(isValidCatalogEntry({ ...base, year: 2026, released: '2026-11-06T00:00:00Z' }, 2026, now)).toBe(true);
+    expect(isValidCatalogEntry({ ...base, releaseInfo: '2025' }, 2025, now)).toBe(true);
+  });
+
+  it('sin fecha exacta, del año en curso no se acepta (podría no haberse estrenado)', () => {
+    expect(isValidCatalogEntry({ ...base, releaseInfo: '2026' }, 2026, now)).toBe(false);
   });
 });

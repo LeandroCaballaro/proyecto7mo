@@ -1,4 +1,5 @@
 import type { ExternalMovieMeta, ExternalMovieResult } from '@nexohub/shared';
+import { cached, DAY, HOUR } from '../../lib/cache';
 import { logger } from '../../lib/logger';
 import {
   directorOf,
@@ -85,14 +86,23 @@ export async function metaFromTmdbDetails(details: TmdbMovieDetails): Promise<Re
   };
 }
 
-export async function fetchCinemeta<T>(path: string): Promise<T> {
-  // Algunos catálogos redirigen (302) a cinemeta-catalogs.strem.io: fetch sigue la redirección.
-  const res = await fetch(`${CINEMETA_URL}${path}`, {
-    headers: { 'User-Agent': 'NexoHub/2.0' },
-    signal: AbortSignal.timeout(10_000),
+/** Vigencia en caché según el tipo de consulta a Cinemeta. */
+function cinemetaTtl(path: string): number {
+  if (path.startsWith('/meta/')) return 7 * DAY; // la ficha de una película casi no cambia
+  if (path.includes('/search=')) return 6 * HOUR;
+  return 12 * HOUR; // catálogos de estrenos: se renuevan dos veces por día
+}
+
+export function fetchCinemeta<T>(path: string): Promise<T> {
+  return cached(`cinemeta:${path}`, cinemetaTtl(path), async () => {
+    // Algunos catálogos redirigen (302) a cinemeta-catalogs.strem.io: fetch sigue la redirección.
+    const res = await fetch(`${CINEMETA_URL}${path}`, {
+      headers: { 'User-Agent': 'NexoHub/2.0' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`Cinemeta respondió ${res.status}`);
+    return (await res.json()) as T;
   });
-  if (!res.ok) throw new Error(`Cinemeta respondió ${res.status}`);
-  return (await res.json()) as T;
 }
 
 export interface CinemetaMeta {

@@ -16,8 +16,9 @@ import { genreSlugFromEnglish, TMDB_GENRE_MAP } from './external-genres';
 
 /**
  * Importación incremental del catálogo.
- * Cada corrida: 1) traduce sinopsis pendientes ('en') hasta agotar el cupo de MyMemory,
- * 2) agrega las películas más recientes que todavía no están en la base.
+ * Cada corrida: 1) guarda al instante las películas más recientes que todavía no están en la base,
+ * 2) traduce las sinopsis pendientes ('en') hasta agotar el cupo diario de MyMemory.
+ * Las respuestas de Cinemeta y las traducciones quedan en caché en la base.
  * Fuente: TMDB si hay TMDB_API_KEY; si no, el catálogo "New" de Cinemeta (sin clave).
  */
 
@@ -42,12 +43,16 @@ const PENDING_BATCH = 100;
 
 async function genreIds() {
   const rows = await prisma.genre.findMany();
-  if (rows.length === 0) throw new Error('No hay géneros en la base. Corré primero: npm run db:seed');
+  if (rows.length === 0)
+    throw new Error('No hay géneros en la base. Corré primero: npm run db:seed');
   return new Map(rows.map((g) => [g.slug, g.id]));
 }
 
 async function ownerId() {
-  const owner = await prisma.user.findFirst({ where: { role: 'SUPERADMIN' }, orderBy: { id: 'asc' } });
+  const owner = await prisma.user.findFirst({
+    where: { role: 'SUPERADMIN' },
+    orderBy: { id: 'asc' },
+  });
   return owner?.id ?? null;
 }
 
@@ -92,70 +97,99 @@ async function existingExternalIds(ids: string[]): Promise<Set<string>> {
 
 // ───────────────────────────── Cinemeta ─────────────────────────────
 
-async function collectCinemeta(opts: ImportOptions, log: Log): Promise<CinemetaMeta[]> {
-  const now = Date.now();
-  const thisYear = new Date().getFullYear();
-  const picked: CinemetaMeta[] = [];
+/** Origen de las filas creadas por el importador (las propuestas por usuarios usan 'imdb'). */
+const CINEMETA_SOURCE = 'cinemeta';
 
-  for (let year = thisYear; year > thisYear - opts.years && picked.length < opts.count; year--) {
-    let skip = 0;
-    for (let page = 0; page < 10 && picked.length < opts.count; page++) {
-      const extra = skip > 0 ? `genre=${year}&skip=${skip}` : `genre=${year}`;
-      const { metas = [] } = await fetchCinemeta<{ metas?: CinemetaMeta[] }>(
-        `/catalog/movie/year/${extra}.json`,
-      );
-      if (metas.length === 0) break;
-      skip += metas.length;
-
-      // Solo estrenadas, con póster y sinopsis.
-      const usable = metas.filter((m) => {
-        if (!m.id?.startsWith('tt') || !m.poster || !m.description?.trim()) return false;
-        const released = m.released ? Date.parse(m.released) : Number.NaN;
-        return Number.isNaN(released) ? (parseYear(m.year ?? m.releaseInfo) ?? year) < thisYear : released <= now;
-      });
-      const known = await existingExternalIds(usable.map((m) => m.id));
-      for (const m of usable) {
-        if (picked.length >= opts.count) break;
-        if (!known.has(m.id) && !picked.some((p) => p.id === m.id)) picked.push(m);
-      }
-    }
-    log(`  ${year}: ${picked.length} nuevas acumuladas`);
-  }
-
-  // Las más recientes primero.
-  return picked.sort((a, b) => (Date.parse(b.released ?? '') || 0) - (Date.parse(a.released ?? '') || 0));
+/**
+ * El catálogo "New" de Cinemeta trae entradas inconsistentes (p. ej. tt12590266 figura como
+ * "I See Ice" de 1938 con el póster de otra obra). Se acepta solo si el año declarado coincide
+ * con el año del catálogo, ya se estrenó, y tiene póster y sinopsis.
+ */
+export function isValidCatalogEntry(
+  m: CinemetaMeta,
+  catalogYear: number,
+  now = Date.now(),
+): boolean {
+  if (!m.id?.startsWith('tt') || !m.poster || !m.description?.trim()) return false;
+  if (parseYear(m.year ?? m.releaseInfo) !== catalogYear) return false;
+  const released = m.released ? Date.parse(m.released) : Number.NaN;
+  if (Number.isNaN(released)) return catalogYear < new Date(now).getFullYear();
+  return new Date(released).getUTCFullYear() === catalogYear && released <= now;
 }
 
+/**
+ * Borra filas importadas desde Cinemeta que no pasan la validación actual (año fuera de la
+ * ventana o sin año), siempre que nadie las haya reseñado ni marcado como favoritas.
+ */
+async function pruneInvalidCinemetaImports(years: number, log: Log): Promise<number> {
+  const minYear = new Date().getFullYear() - years + 1;
+  const { count } = await prisma.movie.deleteMany({
+    where: {
+      externalSource: CINEMETA_SOURCE,
+      reviewsCount: 0,
+      favorites: { none: {} },
+      OR: [{ releaseYear: null }, { releaseYear: { lt: minYear } }],
+    },
+  });
+  if (count > 0) log(`  Películas inválidas eliminadas: ${count}`);
+  return count;
+}
+
+/**
+ * Recorre el catálogo de estrenos página por página y guarda cada página apenas llega,
+ * con la sinopsis en inglés. La traducción se hace después, sin frenar la carga.
+ */
 async function importFromCinemeta(opts: ImportOptions, log: Log) {
+  await pruneInvalidCinemetaImports(opts.years, log);
   const genres = await genreIds();
   const owner = await ownerId();
-  const candidates = await collectCinemeta(opts, log);
+  const now = Date.now();
+  const thisYear = new Date().getFullYear();
   let created = 0;
   let failed = 0;
 
-  for (const m of candidates) {
-    try {
-      const synopsis = await toSpanish(m.description);
-      const genreSlug = genreSlugFromEnglish(m.genres ?? []);
-      await prisma.movie.create({
-        data: {
+  for (let year = thisYear; year > thisYear - opts.years && created < opts.count; year--) {
+    let skip = 0;
+    for (let page = 0; page < 10 && created < opts.count; page++) {
+      const extra = skip > 0 ? `genre=${year}&skip=${skip}` : `genre=${year}`;
+      let metas: CinemetaMeta[] = [];
+      try {
+        metas =
+          (await fetchCinemeta<{ metas?: CinemetaMeta[] }>(`/catalog/movie/year/${extra}.json`))
+            .metas ?? [];
+      } catch (err) {
+        failed++;
+        log(
+          `  No se pudo leer el catálogo ${year} (página ${page + 1}): ${(err as Error).message}`,
+        );
+        break;
+      }
+      if (metas.length === 0) break;
+      skip += metas.length;
+
+      const usable = metas.filter((m) => isValidCatalogEntry(m, year, now));
+      const known = await existingExternalIds(usable.map((m) => m.id));
+      const fresh = usable.filter((m) => !known.has(m.id)).slice(0, opts.count - created);
+      if (fresh.length === 0) continue;
+
+      const { count } = await prisma.movie.createMany({
+        data: fresh.map((m) => ({
           title: m.name,
-          synopsis: synopsis.text,
-          synopsisLang: synopsis.lang,
+          synopsis: m.description!.trim(),
+          synopsisLang: 'en',
           director: directorFromCinemeta(m),
           releaseYear: parseYear(m.year ?? m.releaseInfo),
           posterUrl: cinemetaPoster(m.poster),
-          genreId: genres.get(genreSlug) ?? genres.get('drama')!,
-          status: 'APPROVED',
-          externalSource: 'imdb',
+          genreId: genres.get(genreSlugFromEnglish(m.genres ?? [])) ?? genres.get('drama')!,
+          status: 'APPROVED' as const,
+          externalSource: CINEMETA_SOURCE,
           externalId: m.id,
           proposedById: owner,
-        },
+        })),
+        skipDuplicates: true,
       });
-      created++;
-    } catch (err) {
-      failed++;
-      log(`  No se pudo importar "${m.name}" (${m.id}): ${(err as Error).message}`);
+      created += count;
+      log(`  ${year}, página ${page + 1}: ${count} guardadas (total ${created})`);
     }
   }
   return { created, failed };
@@ -248,16 +282,20 @@ async function importFromTmdb(opts: ImportOptions, log: Log) {
 
 let running = false;
 
-export async function importLatestMovies(opts: ImportOptions, log: Log = () => {}): Promise<ImportResult> {
+export async function importLatestMovies(
+  opts: ImportOptions,
+  log: Log = () => {},
+): Promise<ImportResult> {
   if (running) throw new Error('Ya hay una importación en curso');
   running = true;
   try {
     const source = isTmdbEnabled() ? 'tmdb' : 'cinemeta';
     log(`Fuente: ${source === 'tmdb' ? 'TMDB' : 'Cinemeta'}`);
 
-    const translatedPending = await translatePendingSynopses(log);
     const { created, failed } =
       source === 'tmdb' ? await importFromTmdb(opts, log) : await importFromCinemeta(opts, log);
+    // Las películas ya están guardadas y visibles; ahora se traducen sus sinopsis.
+    const translatedPending = await translatePendingSynopses(log);
     const pendingTranslation = await prisma.movie.count({ where: { synopsisLang: 'en' } });
 
     return { source, created, translatedPending, pendingTranslation, failed };

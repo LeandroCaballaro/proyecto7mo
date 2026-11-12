@@ -1,4 +1,5 @@
 import { env } from '../config/env';
+import { cached, DAY, HOUR } from './cache';
 
 /**
  * Cliente mínimo de TMDB (https://developer.themoviedb.org).
@@ -120,12 +121,14 @@ export const tmdb = {
   },
 
   search(q: string) {
-    return request<TmdbPage<TmdbListMovie>>('/search/movie', {
-      query: q,
-      language: env.TMDB_LANGUAGE,
-      include_adult: false,
-      page: 1,
-    });
+    return cached(`tmdb:search:${env.TMDB_LANGUAGE}:${q.toLowerCase()}`, 6 * HOUR, () =>
+      request<TmdbPage<TmdbListMovie>>('/search/movie', {
+        query: q,
+        language: env.TMDB_LANGUAGE,
+        include_adult: false,
+        page: 1,
+      }),
+    );
   },
 
   /** Busca por id de IMDb (`tt...`). */
@@ -137,10 +140,12 @@ export const tmdb = {
   },
 
   details(id: number) {
-    return request<TmdbMovieDetails>(`/movie/${id}`, {
-      language: env.TMDB_LANGUAGE,
-      append_to_response: 'credits,translations',
-    });
+    return cached(`tmdb:movie:${env.TMDB_LANGUAGE}:${id}`, 7 * DAY, () =>
+      request<TmdbMovieDetails>(`/movie/${id}`, {
+        language: env.TMDB_LANGUAGE,
+        append_to_response: 'credits,translations',
+      }),
+    );
   },
 };
 
