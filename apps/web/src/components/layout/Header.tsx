@@ -211,7 +211,7 @@ export function Header() {
                   type="button"
                   className="px-4 py-2 rounded-lg text-sm font-medium border border-[#0f3460] text-[#f5f5f5] hover:bg-[#16213e] hover:border-[#e94560]/40 transition-colors cursor-pointer"
                 >
-                  Log In
+                  Iniciar sesión
                 </button>
               </Link>
               <Link to="/registro">
@@ -219,7 +219,7 @@ export function Header() {
                   type="button"
                   className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#e94560] text-white hover:bg-[#e94560]/90 shadow-md shadow-[#e94560]/20 transition-all cursor-pointer"
                 >
-                  Sign Up
+                  Registrarse
                 </button>
               </Link>
             </div>
@@ -306,12 +306,12 @@ export function Header() {
               <div className="grid grid-cols-2 gap-2">
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="outline" className="w-full">
-                    Log In
+                    Iniciar sesión
                   </Button>
                 </Link>
                 <Link to="/registro" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="primary" className="w-full">
-                    Sign Up
+                    Registrarse
                   </Button>
                 </Link>
               </div>

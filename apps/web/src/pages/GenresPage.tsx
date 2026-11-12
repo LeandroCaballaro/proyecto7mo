@@ -1,17 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ArrowUpRight,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Flame,
-  MessageCircle,
-  Sparkles,
-  Star,
-  TrendingUp,
-} from 'lucide-react';
+import { ArrowUpRight, Calendar, ChevronLeft, ChevronRight, Star, TrendingUp } from 'lucide-react';
 import type { ApiPaginated, MovieDto } from '@nexohub/shared';
 import { Skeleton } from '../components/ui';
 import { apiClient } from '../lib/api-client';
@@ -21,12 +11,11 @@ type RecommendationMode = 'featured' | 'rating' | 'reviews' | 'newest';
 const modes: Array<{
   value: RecommendationMode;
   label: string;
-  icon: typeof Sparkles;
 }> = [
-  { value: 'featured', label: 'Para vos', icon: Sparkles },
-  { value: 'rating', label: 'Mejor valoradas', icon: Star },
-  { value: 'reviews', label: 'Más comentadas', icon: MessageCircle },
-  { value: 'newest', label: 'Recién agregadas', icon: Flame },
+  { value: 'featured', label: 'Para vos' },
+  { value: 'rating', label: 'Mejor valoradas' },
+  { value: 'reviews', label: 'Más comentadas' },
+  { value: 'newest', label: 'Recién agregadas' },
 ];
 
 export function GenresPage() {
@@ -108,18 +97,17 @@ export function GenresPage() {
                 className="flex snap-x gap-2 overflow-x-auto pb-1 scrollbar-none"
                 aria-label="Tipo de recomendación"
               >
-                {modes.map(({ value, label, icon: Icon }) => (
+                {modes.map(({ value, label }) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => setMode(value)}
-                    className={`flex shrink-0 snap-start items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-bold backdrop-blur-md transition-all ${
+                    className={`flex shrink-0 snap-start items-center rounded-full border px-4 py-2 text-xs font-bold backdrop-blur-md transition-all ${
                       mode === value
                         ? 'border-[#e94560] bg-[#e94560] text-white shadow-lg shadow-[#e94560]/20'
                         : 'border-white/15 bg-black/20 text-white/65 hover:border-white/30 hover:text-white'
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
                     {label}
                   </button>
                 ))}
