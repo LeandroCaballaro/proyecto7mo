@@ -1,9 +1,14 @@
+node_modules/
+dist/
+coverage/
+.turbo/
 .env
-.env.local
+.env.*
+!.env.example
+*.log
+apps/api/uploads/
 
-**/node_modules/
-**/vendor/
-
+*.tsbuildinfo
 .vscode/
 .idea/
 Thumbs.db

@@ -1,0 +1,101 @@
+@import 'tailwindcss';
+
+@layer base {
+  :root {
+    --background: #1a1a2e;
+    --foreground: #f5f5f5;
+    --card: #16213e;
+    --card-foreground: #f5f5f5;
+    --primary: #e94560;
+    --primary-foreground: #ffffff;
+    --secondary: #0f3460;
+    --secondary-foreground: #f5f5f5;
+    --muted: #0f3460;
+    --muted-foreground: #a0a0a0;
+    --border: #0f3460;
+    --radius: 0.625rem;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family:
+      'Plus Jakarta Sans',
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #0f3460 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #0f3460;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Glassmorphism original de NexoHub */
+.header-glass {
+  background-color: rgba(26, 26, 46, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Línea animada en los enlaces de navegación */
+.nav-link {
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: #e94560;
+  transition: width 0.25s ease;
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+.nexologo {
+  width: 100%;
+  height: auto;
+  max-width: 480px;
+  filter: drop-shadow(0 15px 30px rgba(233, 69, 96, 0.15))
+    drop-shadow(0 8px 15px rgba(0, 0, 0, 0.6));
+}

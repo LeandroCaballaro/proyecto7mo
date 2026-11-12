@@ -1,0 +1,135 @@
+import { createHash } from 'node:crypto';
+import { env } from '../config/env';
+import { logger } from './logger';
+import { prisma } from './prisma';
+
+/**
+ * Traducción inglés -> español con MyMemory (gratis, sin registro).
+ * Cupo: 5.000 caracteres/día por IP, o 50.000 si se envía TRANSLATE_EMAIL.
+ * Si se agota el cupo devuelve null y no vuelve a intentar hasta el día siguiente.
+ */
+
+const ENDPOINT = 'https://api.mymemory.translated.net/get';
+/** MyMemory rechaza consultas de más de 500 bytes. */
+const MAX_CHUNK_BYTES = 450;
+
+/** Día (UTC) en que se agotó el cupo; al día siguiente se vuelve a intentar. */
+let exhaustedOn: string | null = null;
+const today = () => new Date().toISOString().slice(0, 10);
+
+export function isTranslationQuotaExhausted(): boolean {
+  if (exhaustedOn && exhaustedOn !== today()) exhaustedOn = null;
+  return exhaustedOn !== null;
+}
+
+function splitIntoChunks(text: string): string[] {
+  const sentences = text.match(/[^.!?]+[.!?]*\s*/g) ?? [text];
+  const chunks: string[] = [];
+  let current = '';
+
+  for (const sentence of sentences) {
+    const candidate = current + sentence;
+    if (Buffer.byteLength(candidate) <= MAX_CHUNK_BYTES) {
+      current = candidate;
+      continue;
+    }
+    if (current) chunks.push(current.trim());
+    // Oración más larga que el límite: se corta por palabras.
+    if (Buffer.byteLength(sentence) > MAX_CHUNK_BYTES) {
+      let piece = '';
+      for (const word of sentence.split(/\s+/)) {
+        if (Buffer.byteLength(`${piece} ${word}`) > MAX_CHUNK_BYTES) {
+          chunks.push(piece.trim());
+          piece = word;
+        } else {
+          piece = piece ? `${piece} ${word}` : word;
+        }
+      }
+      current = piece;
+    } else {
+      current = sentence;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+async function translateChunk(chunk: string, from: string, to: string): Promise<string | null> {
+  const params = new URLSearchParams({ q: chunk, langpair: `${from}|${to}` });
+  if (env.TRANSLATE_EMAIL) params.set('de', env.TRANSLATE_EMAIL);
+
+  const res = await fetch(`${ENDPOINT}?${params}`, { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) return null;
+
+  const json = (await res.json()) as {
+    responseStatus?: number | string;
+    responseData?: { translatedText?: string };
+    quotaFinished?: boolean;
+  };
+  const text = json.responseData?.translatedText ?? '';
+
+  if (
+    json.quotaFinished ||
+    Number(json.responseStatus) === 429 ||
+    text.startsWith('MYMEMORY WARNING')
+  ) {
+    exhaustedOn = today();
+    logger.warn('Cupo diario de MyMemory agotado: las sinopsis restantes quedan en inglés');
+    return null;
+  }
+  if (Number(json.responseStatus) !== 200 || !text) return null;
+  return text;
+}
+
+const cacheKey = (text: string, from: string, to: string) =>
+  createHash('sha256').update(`${from}|${to}|${text}`).digest('hex');
+
+async function readCache(hash: string): Promise<string | null> {
+  try {
+    const hit = await prisma.translationCache.findUnique({ where: { hash } });
+    return hit?.translated ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(hash: string, langPair: string, translated: string) {
+  try {
+    await prisma.translationCache.upsert({
+      where: { hash },
+      create: { hash, langPair, translated },
+      update: { translated },
+    });
+  } catch (err) {
+    logger.warn({ err }, 'No se pudo guardar la traducción en caché');
+  }
+}
+
+/**
+ * Traduce un texto. Primero busca en la caché de traducciones (instantáneo y sin gastar cupo);
+ * si no está, lo pide a MyMemory y guarda el resultado.
+ */
+export async function translateText(text: string, from = 'en', to = 'es'): Promise<string | null> {
+  const clean = text.trim();
+  if (!clean) return null;
+
+  const hash = cacheKey(clean, from, to);
+  const hit = await readCache(hash);
+  if (hit) return hit;
+  if (isTranslationQuotaExhausted()) return null;
+
+  try {
+    const parts: string[] = [];
+    for (const chunk of splitIntoChunks(clean)) {
+      const translated = await translateChunk(chunk, from, to);
+      if (translated == null) return null;
+      parts.push(translated);
+    }
+    const result = parts.join(' ');
+    await writeCache(hash, `${from}|${to}`, result);
+    return result;
+  } catch (err) {
+    logger.warn({ err }, 'Falló la traducción automática');
+    return null;
+  }
+}
