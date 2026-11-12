@@ -223,7 +223,7 @@ export const moviesService = {
             { ratingAvg: 'desc' },
             { releaseYear: 'desc' },
           ],
-          take: 1,
+          take: 5,
           select: { id: true, title: true, posterUrl: true },
         },
       },
@@ -234,6 +234,7 @@ export const moviesService = {
       slug: g.slug,
       moviesCount: g._count.movies,
       featuredMovie: g.movies[0] ?? null,
+      featuredMovies: g.movies,
     }));
   },
 };

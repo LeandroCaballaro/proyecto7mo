@@ -60,7 +60,7 @@ export function App() {
       <Header />
 
       <main
-        className={`flex-1 w-full ${location.pathname === '/' ? '' : 'max-w-7xl mx-auto px-4 sm:px-6'} pt-6`}
+        className={`flex-1 w-full ${location.pathname === '/' || location.pathname === '/generos' ? '' : 'max-w-7xl mx-auto px-4 sm:px-6'} pt-6`}
       >
         <Routes>
           <Route path="/" element={<HomePage />} />

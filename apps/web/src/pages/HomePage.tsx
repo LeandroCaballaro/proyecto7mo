@@ -252,10 +252,10 @@ export function HomePage() {
             ))}
           </div>
           <Link
-            to="/generos"
+            to="/explorar"
             className="inline-flex items-center gap-2 text-sm font-bold text-[#e94560] hover:text-[#ff7187]"
           >
-            Ver todos los géneros <ArrowRight className="h-4 w-4" />
+            Explorar catálogo <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>

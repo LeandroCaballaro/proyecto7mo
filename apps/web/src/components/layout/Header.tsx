@@ -65,7 +65,7 @@ export function Header() {
               isGeneros ? 'text-[#e94560] active' : 'text-[#a0a0a0] hover:text-[#e94560]'
             }`}
           >
-            Géneros
+            Recomendaciones
           </Link>
           <Link
             to="/ranking"
@@ -259,7 +259,7 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
               className="block px-3 py-2 rounded-lg text-sm font-medium text-[#a0a0a0] hover:bg-[#16213e] hover:text-white"
             >
-              Géneros
+              Recomendaciones
             </Link>
             <Link
               to="/ranking"

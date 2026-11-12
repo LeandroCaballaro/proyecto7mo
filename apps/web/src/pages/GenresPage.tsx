@@ -1,274 +1,268 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowUpRight,
-  Clapperboard,
-  Compass,
-  Drama,
-  Film,
-  Ghost,
-  Heart,
-  Laugh,
-  Rocket,
-  Search,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  MessageCircle,
   Sparkles,
-  Swords,
-  WandSparkles,
-  Zap,
-  type LucideIcon,
+  Star,
+  TrendingUp,
 } from 'lucide-react';
-import { GENRES } from '@nexohub/shared';
+import type { ApiPaginated, MovieDto } from '@nexohub/shared';
 import { Skeleton } from '../components/ui';
 import { apiClient } from '../lib/api-client';
 
-interface GenreWithCount {
-  id: number;
-  name: string;
-  slug: string;
-  moviesCount: number;
-  featuredMovie?: {
-    id: number;
-    title: string;
-    posterUrl: string | null;
-  } | null;
-}
+type RecommendationMode = 'featured' | 'rating' | 'reviews' | 'newest';
 
-interface GenreVisual {
-  icon: LucideIcon;
-  accent: string;
-  glow: string;
-  iconBackground: string;
-}
-
-const genreVisuals: Record<string, GenreVisual> = {
-  accion: {
-    icon: Swords,
-    accent: 'text-orange-300',
-    glow: 'from-orange-500/20 via-orange-500/5',
-    iconBackground: 'bg-orange-400/10 border-orange-300/20',
-  },
-  animacion: {
-    icon: Sparkles,
-    accent: 'text-violet-300',
-    glow: 'from-violet-500/20 via-violet-500/5',
-    iconBackground: 'bg-violet-400/10 border-violet-300/20',
-  },
-  aventura: {
-    icon: Compass,
-    accent: 'text-emerald-300',
-    glow: 'from-emerald-500/20 via-emerald-500/5',
-    iconBackground: 'bg-emerald-400/10 border-emerald-300/20',
-  },
-  'ciencia-ficcion': {
-    icon: Rocket,
-    accent: 'text-cyan-300',
-    glow: 'from-cyan-500/20 via-cyan-500/5',
-    iconBackground: 'bg-cyan-400/10 border-cyan-300/20',
-  },
-  comedia: {
-    icon: Laugh,
-    accent: 'text-yellow-300',
-    glow: 'from-yellow-500/20 via-yellow-500/5',
-    iconBackground: 'bg-yellow-400/10 border-yellow-300/20',
-  },
-  crimen: {
-    icon: Search,
-    accent: 'text-slate-300',
-    glow: 'from-slate-400/20 via-slate-400/5',
-    iconBackground: 'bg-slate-300/10 border-slate-200/20',
-  },
-  documental: {
-    icon: Clapperboard,
-    accent: 'text-blue-300',
-    glow: 'from-blue-500/20 via-blue-500/5',
-    iconBackground: 'bg-blue-400/10 border-blue-300/20',
-  },
-  drama: {
-    icon: Drama,
-    accent: 'text-rose-300',
-    glow: 'from-rose-500/20 via-rose-500/5',
-    iconBackground: 'bg-rose-400/10 border-rose-300/20',
-  },
-  fantasia: {
-    icon: WandSparkles,
-    accent: 'text-fuchsia-300',
-    glow: 'from-fuchsia-500/20 via-fuchsia-500/5',
-    iconBackground: 'bg-fuchsia-400/10 border-fuchsia-300/20',
-  },
-  misterio: {
-    icon: Search,
-    accent: 'text-indigo-300',
-    glow: 'from-indigo-500/20 via-indigo-500/5',
-    iconBackground: 'bg-indigo-400/10 border-indigo-300/20',
-  },
-  romance: {
-    icon: Heart,
-    accent: 'text-pink-300',
-    glow: 'from-pink-500/20 via-pink-500/5',
-    iconBackground: 'bg-pink-400/10 border-pink-300/20',
-  },
-  terror: {
-    icon: Ghost,
-    accent: 'text-red-300',
-    glow: 'from-red-500/20 via-red-500/5',
-    iconBackground: 'bg-red-400/10 border-red-300/20',
-  },
-  thriller: {
-    icon: Zap,
-    accent: 'text-amber-300',
-    glow: 'from-amber-500/20 via-amber-500/5',
-    iconBackground: 'bg-amber-400/10 border-amber-300/20',
-  },
-};
-
-const defaultVisual: GenreVisual = {
-  icon: Film,
-  accent: 'text-[#e94560]',
-  glow: 'from-[#e94560]/20 via-[#e94560]/5',
-  iconBackground: 'bg-[#e94560]/10 border-[#e94560]/20',
-};
+const modes: Array<{
+  value: RecommendationMode;
+  label: string;
+  icon: typeof Sparkles;
+}> = [
+  { value: 'featured', label: 'Para vos', icon: Sparkles },
+  { value: 'rating', label: 'Mejor valoradas', icon: Star },
+  { value: 'reviews', label: 'Más comentadas', icon: MessageCircle },
+  { value: 'newest', label: 'Recién agregadas', icon: Flame },
+];
 
 export function GenresPage() {
-  const [selectedSlug, setSelectedSlug] = useState('accion');
-  const { data: genres, isLoading } = useQuery({
-    queryKey: ['movies', 'genres'],
+  const [mode, setMode] = useState<RecommendationMode>('featured');
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const { data: recommendations, isLoading } = useQuery({
+    queryKey: ['movies', 'recommendations', mode],
     queryFn: async () => {
-      const res = await apiClient<{ data: GenreWithCount[] }>('/movies/genres');
-      return res.data;
+      if (mode === 'featured') {
+        return (await apiClient<{ data: MovieDto[] }>('/movies/featured?limit=12')).data;
+      }
+      return (
+        await apiClient<ApiPaginated<MovieDto>>(
+          `/movies?page=1&pageSize=12&sort=${mode === 'newest' ? 'newest' : mode}`,
+        )
+      ).data;
     },
   });
 
-  const list: GenreWithCount[] =
-    genres && genres.length > 0
-      ? genres
-      : GENRES.map((g) => ({
-          id: 0,
-          name: g.name,
-          slug: g.slug,
-          moviesCount: 0,
-          featuredMovie: null,
-        }));
-  const totalMovies = list.reduce((total, genre) => total + (genre.moviesCount ?? 0), 0);
-  const selectedGenre = list.find((genre) => genre.slug === selectedSlug) ?? list[0];
-  const selectedVisual = selectedGenre
-    ? (genreVisuals[selectedGenre.slug] ?? defaultVisual)
-    : defaultVisual;
-  const SelectedIcon = selectedVisual.icon;
+  const movies = recommendations ?? [];
+  const activeMovie = movies[activeIndex % Math.max(movies.length, 1)];
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [mode]);
+
+  useEffect(() => {
+    if (movies.length < 2) return;
+    const interval = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % movies.length);
+    }, 7000);
+    return () => window.clearInterval(interval);
+  }, [mode, movies.length]);
+
+  function changeMovie(direction: number) {
+    if (movies.length < 2) return;
+    setActiveIndex((current) => (current + direction + movies.length) % movies.length);
+  }
+
+  function selectMovie(movie: MovieDto) {
+    const index = movies.findIndex((candidate) => candidate.id === movie.id);
+    if (index >= 0) setActiveIndex(index);
+  }
+
+  const upcomingMovies = movies.filter((movie) => movie.id !== activeMovie?.id).slice(0, 5);
 
   return (
-    <div className="space-y-8 pb-16">
-      <header className="mx-auto max-w-3xl text-center">
-        <div className="mb-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#e94560]">
-          <Film className="h-4 w-4" />
-          Explora el catálogo
-        </div>
-        <h1 className="text-3xl font-black tracking-tight text-[#f5f5f5] sm:text-5xl">
-          ¿Qué tenés ganas de ver hoy?
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#a0a0a0]">
-          Elegí un género y dejá que la comunidad te acerque una buena historia.
-        </p>
-        <p className="mt-3 text-xs text-[#707382]">
-          {list.length} géneros · {totalMovies} películas
-        </p>
-      </header>
-
-      {isLoading || !selectedGenre ? (
-        <Skeleton className="h-[590px] w-full rounded-3xl" />
+    <div className="-mt-6 bg-[#10182d]">
+      {isLoading || !activeMovie ? (
+        <Skeleton className="h-[calc(100vh-4rem)] min-h-[720px] w-full rounded-none" />
       ) : (
-        <div className="overflow-hidden rounded-3xl border border-[#0f3460] bg-[#121a31] shadow-2xl shadow-black/20 lg:grid lg:min-h-[590px] lg:grid-cols-[280px_1fr]">
-          <div className="border-b border-[#0f3460] bg-[#10182d] lg:border-b-0 lg:border-r">
-            <div className="hidden border-b border-[#0f3460]/70 px-5 py-5 lg:block">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#737686]">
-                Todos los géneros
-              </p>
-            </div>
+        <section className="relative isolate flex min-h-[calc(100vh-4rem)] flex-col overflow-hidden">
+          {activeMovie.posterUrl && (
+            <img
+              key={`backdrop-${activeMovie.id}`}
+              src={activeMovie.posterUrl}
+              alt=""
+              className="absolute inset-0 -z-30 h-full w-full scale-105 animate-in fade-in duration-700 object-cover object-[center_25%] opacity-45 blur-[2px]"
+            />
+          )}
+          <div className="absolute inset-0 -z-20 bg-gradient-to-r from-[#0b1224] via-[#0b1224]/90 to-[#0b1224]/40" />
+          <div className="absolute inset-0 -z-20 bg-gradient-to-t from-[#0b1224] via-[#0b1224]/20 to-[#0b1224]/75" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_42%,rgba(233,69,96,0.18),transparent_28%)]" />
 
-            <nav
-              className="flex gap-1 overflow-x-auto p-3 scrollbar-none lg:max-h-[525px] lg:flex-col lg:overflow-y-auto lg:p-2 lg:pr-1 lg:custom-scrollbar"
-              aria-label="Seleccionar género"
-            >
-              {list.map((genre) => {
-                const active = genre.slug === selectedGenre.slug;
-                const visual = genreVisuals[genre.slug] ?? defaultVisual;
-                const GenreIcon = visual.icon;
-                return (
+          <div className="mx-auto w-full max-w-7xl px-4 pt-7 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#ff617a]">
+                  <TrendingUp className="h-4 w-4" />
+                  Recomendaciones NexoHub
+                </div>
+                <p className="mt-1 text-xs text-white/45">
+                  Una selección para encontrar tu próxima película.
+                </p>
+              </div>
+
+              <nav
+                className="flex snap-x gap-2 overflow-x-auto pb-1 scrollbar-none"
+                aria-label="Tipo de recomendación"
+              >
+                {modes.map(({ value, label, icon: Icon }) => (
                   <button
-                    key={genre.slug}
+                    key={value}
                     type="button"
-                    onClick={() => setSelectedSlug(genre.slug)}
-                    className={`group flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all lg:w-full ${
-                      active
-                        ? 'bg-[#e94560] text-white shadow-lg shadow-[#e94560]/15'
-                        : 'text-[#a4a7b4] hover:bg-white/5 hover:text-white'
+                    onClick={() => setMode(value)}
+                    className={`flex shrink-0 snap-start items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-bold backdrop-blur-md transition-all ${
+                      mode === value
+                        ? 'border-[#e94560] bg-[#e94560] text-white shadow-lg shadow-[#e94560]/20'
+                        : 'border-white/15 bg-black/20 text-white/65 hover:border-white/30 hover:text-white'
                     }`}
                   >
-                    <GenreIcon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-                    <span className="text-sm font-bold">{genre.name}</span>
-                    <span
-                      className={`ml-auto hidden text-[11px] tabular-nums lg:block ${active ? 'text-white/70' : 'text-[#656978]'}`}
-                    >
-                      {genre.moviesCount}
-                    </span>
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
                   </button>
-                );
-              })}
-            </nav>
+                ))}
+              </nav>
+            </div>
           </div>
 
-          <section className="relative isolate flex min-h-[480px] items-end overflow-hidden p-6 sm:p-10 lg:min-h-full lg:p-14">
-            {selectedGenre.featuredMovie?.posterUrl && (
-              <img
-                key={selectedGenre.slug}
-                src={selectedGenre.featuredMovie.posterUrl}
-                alt=""
-                className="absolute inset-0 -z-30 h-full w-full animate-in fade-in duration-500 object-cover object-center"
-              />
-            )}
-            <div className="absolute inset-0 -z-20 bg-gradient-to-r from-[#10182d]/95 via-[#10182d]/70 to-[#10182d]/25" />
-            <div className="absolute inset-0 -z-20 bg-gradient-to-t from-[#10182d] via-[#10182d]/20 to-black/15" />
-            <div className={`absolute inset-0 -z-10 bg-gradient-to-br ${selectedVisual.glow} to-transparent opacity-60`} />
-
-            <div key={selectedGenre.slug} className="max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div
-                className={`mb-5 flex h-13 w-13 items-center justify-center rounded-2xl border backdrop-blur-md ${selectedVisual.iconBackground} ${selectedVisual.accent}`}
-              >
-                <SelectedIcon className="h-6 w-6" strokeWidth={1.8} />
-              </div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">
-                {selectedGenre.moviesCount}{' '}
-                {selectedGenre.moviesCount === 1 ? 'película disponible' : 'películas disponibles'}
-              </p>
-              <h2 className="mt-2 text-4xl font-black tracking-tight text-white sm:text-6xl">
-                {selectedGenre.name}
-              </h2>
-
-              {selectedGenre.featuredMovie && (
-                <div className="mt-6 border-l-2 border-[#e94560] pl-4">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/45">
-                    Recomendación destacada
+          <div className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:py-10">
+            <div
+              key={`content-${activeMovie.id}`}
+              className="animate-in fade-in slide-in-from-left-3 duration-500 lg:col-span-7"
+              aria-live="polite"
+            >
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                <span className="rounded-md bg-[#e94560] px-2.5 py-1 uppercase tracking-wider text-white">
+                  {activeMovie.genre.name}
+                </span>
+                {activeMovie.releaseYear && (
+                  <span className="flex items-center gap-1.5 text-white/55">
+                    <Calendar className="h-3.5 w-3.5" /> {activeMovie.releaseYear}
                   </span>
-                  <Link
-                    to={`/peliculas/${selectedGenre.featuredMovie.id}`}
-                    className="mt-1 flex w-fit items-center gap-2 text-lg font-bold text-white transition-colors hover:text-[#ff7187]"
+                )}
+                <span className="flex items-center gap-1.5 text-amber-300">
+                  <Star className="h-3.5 w-3.5 fill-current" />
+                  {activeMovie.ratingAvg > 0 ? activeMovie.ratingAvg.toFixed(1) : 'Nueva'}
+                </span>
+                <span className="text-white/40">
+                  {activeMovie.reviewsCount} {activeMovie.reviewsCount === 1 ? 'reseña' : 'reseñas'}
+                </span>
+              </div>
+
+              <h1 className="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-[-0.045em] text-white drop-shadow-xl sm:text-6xl lg:text-7xl">
+                {activeMovie.title}
+              </h1>
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
+                {activeMovie.synopsis ||
+                  `Una recomendación destacada de ${activeMovie.genre.name.toLowerCase()} elegida para descubrir algo diferente.`}
+              </p>
+
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link
+                  to={`/peliculas/${activeMovie.id}`}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#10182d] shadow-xl transition-all hover:-translate-y-0.5 hover:bg-white/90"
+                >
+                  Ver película <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to={`/explorar?genre=${activeMovie.genre.slug}`}
+                  className="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 bg-black/25 px-6 text-sm font-bold text-white backdrop-blur-md transition-colors hover:bg-black/40"
+                >
+                  Más de {activeMovie.genre.name}
+                </Link>
+              </div>
+
+              {movies.length > 1 && (
+                <div className="mt-8 flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => changeMovie(-1)}
+                    aria-label="Recomendación anterior"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md transition-colors hover:bg-white hover:text-[#10182d]"
                   >
-                    {selectedGenre.featuredMovie.title}
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {movies.slice(0, 8).map((movie, index) => (
+                      <button
+                        key={movie.id}
+                        type="button"
+                        onClick={() => setActiveIndex(index)}
+                        aria-label={`Mostrar ${movie.title}`}
+                        className={`h-1 rounded-full transition-all ${index === activeIndex ? 'w-9 bg-[#e94560]' : 'w-4 bg-white/30 hover:bg-white/55'}`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => changeMovie(1)}
+                    aria-label="Siguiente recomendación"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md transition-colors hover:bg-white hover:text-[#10182d]"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
                 </div>
               )}
-
-              <Link
-                to={`/explorar?genre=${selectedGenre.slug}`}
-                className="mt-8 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#e94560] px-5 text-sm font-bold text-white shadow-lg shadow-[#e94560]/20 transition-all hover:-translate-y-0.5 hover:bg-[#f0526b]"
-              >
-                Explorar {selectedGenre.name}
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
             </div>
-          </section>
-        </div>
+
+            <div className="hidden items-center justify-center lg:col-span-5 lg:flex">
+              {activeMovie.posterUrl && (
+                <div className="relative">
+                  <div className="absolute inset-6 -z-10 rounded-[2rem] bg-[#e94560]/30 blur-3xl" />
+                  <img
+                    key={`poster-${activeMovie.id}`}
+                    src={activeMovie.posterUrl}
+                    alt={`Póster de ${activeMovie.title}`}
+                    className="max-h-[430px] w-auto animate-in fade-in zoom-in-95 rounded-2xl border border-white/15 object-cover shadow-2xl shadow-black/60 duration-500"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {upcomingMovies.length > 0 && (
+            <div className="border-t border-white/10 bg-[#080e1d]/55 backdrop-blur-xl">
+              <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+                    Próximas recomendaciones
+                  </p>
+                  <span className="text-[11px] text-white/30">Cambio automático en 7 segundos</span>
+                </div>
+                <div className="flex snap-x gap-3 overflow-x-auto scrollbar-none">
+                  {upcomingMovies.map((movie) => (
+                    <button
+                      key={movie.id}
+                      type="button"
+                      onClick={() => selectMovie(movie)}
+                      className="group relative h-20 w-48 shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-[#16213e] text-left transition-all hover:-translate-y-0.5 hover:border-[#e94560]/60 sm:w-56"
+                    >
+                      {movie.posterUrl && (
+                        <img
+                          src={movie.posterUrl}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105 group-hover:opacity-55"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#0b1224] via-[#0b1224]/80 to-transparent" />
+                      <div className="relative flex h-full flex-col justify-end p-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#ff7187]">
+                          {movie.genre.name}
+                        </span>
+                        <span className="mt-0.5 truncate text-xs font-bold text-white">
+                          {movie.title}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );
