@@ -12,7 +12,7 @@ export function Footer() {
   });
 
   return (
-    <footer className="w-full border-t border-[#0f3460] bg-[#1a1a2e] py-12 mt-20">
+    <footer className="w-full border-t border-[#0f3460] bg-[#12182b] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="space-y-3 md:col-span-2">

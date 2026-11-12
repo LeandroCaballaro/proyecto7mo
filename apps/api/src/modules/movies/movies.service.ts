@@ -215,6 +215,17 @@ export const moviesService = {
         name: true,
         slug: true,
         _count: { select: { movies: { where: { status: 'APPROVED' } } } },
+        movies: {
+          where: { status: 'APPROVED', posterUrl: { not: null } },
+          orderBy: [
+            { featured: 'desc' },
+            { reviewsCount: 'desc' },
+            { ratingAvg: 'desc' },
+            { releaseYear: 'desc' },
+          ],
+          take: 1,
+          select: { id: true, title: true, posterUrl: true },
+        },
       },
     });
     return genres.map((g) => ({
@@ -222,6 +233,7 @@ export const moviesService = {
       name: g.name,
       slug: g.slug,
       moviesCount: g._count.movies,
+      featuredMovie: g.movies[0] ?? null,
     }));
   },
 };

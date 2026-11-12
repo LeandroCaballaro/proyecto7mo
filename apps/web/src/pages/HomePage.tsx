@@ -1,12 +1,15 @@
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   Award,
-  Compass,
+  ChevronLeft,
+  ChevronRight,
   Film,
   Play,
   ShieldCheck,
+  Sparkles,
   Star,
   TrendingUp,
   Users,
@@ -16,266 +19,177 @@ import { GENRES, type MovieDto } from '@nexohub/shared';
 import { MovieCard } from '../features/movies/MovieCard';
 import { apiClient } from '../lib/api-client';
 
+interface HomeGenre {
+  id?: number;
+  name: string;
+  slug: string;
+  moviesCount?: number;
+  featuredMovie?: { id: number; title: string; posterUrl: string | null } | null;
+}
+
+function RailButton({ direction, onClick }: { direction: 'left' | 'right'; onClick: () => void }) {
+  const Icon = direction === 'left' ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={
+        direction === 'left' ? 'Desplazar hacia la izquierda' : 'Desplazar hacia la derecha'
+      }
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-[#0f3460] bg-[#16213e] text-[#a0a0a0] transition-all hover:border-[#e94560]/60 hover:text-white active:scale-95"
+    >
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+}
+
 export function HomePage() {
+  const moviesRailRef = useRef<HTMLDivElement>(null);
+  const genresRailRef = useRef<HTMLDivElement>(null);
+
   const { data: featuredMovies, isLoading } = useQuery({
     queryKey: ['movies', 'featured'],
-    queryFn: async () => {
-      const res = await apiClient<{ data: MovieDto[] }>('/movies/featured?limit=8');
-      return res.data;
-    },
+    queryFn: async () => (await apiClient<{ data: MovieDto[] }>('/movies/featured?limit=10')).data,
   });
 
   const { data: stats } = useQuery({
     queryKey: ['stats', 'summary'],
-    queryFn: async () => {
-      const res = await apiClient<{
-        data: {
-          usersCount: number;
-          reviewsCount: number;
-          moviesCount: number;
-          genresCount: number;
-        };
-      }>('/stats/summary');
-      return res.data;
-    },
+    queryFn: async () =>
+      (
+        await apiClient<{
+          data: {
+            usersCount: number;
+            reviewsCount: number;
+            moviesCount: number;
+            genresCount: number;
+          };
+        }>('/stats/summary')
+      ).data,
   });
 
   const { data: genresData } = useQuery({
     queryKey: ['movies', 'genres'],
-    queryFn: async () => {
-      const res = await apiClient<{
-        data: Array<{ id: number; name: string; slug: string; moviesCount?: number }>;
-      }>('/movies/genres');
-      return res.data;
-    },
+    queryFn: async () => (await apiClient<{ data: HomeGenre[] }>('/movies/genres')).data,
   });
 
-  const previewGenres = (genresData && genresData.length > 0 ? genresData : GENRES).slice(0, 6);
+  const genres: readonly HomeGenre[] = genresData?.length ? genresData : GENRES;
+  function scrollRail(ref: React.RefObject<HTMLDivElement | null>, direction: number) {
+    ref.current?.scrollBy({
+      left: direction * Math.min(ref.current.clientWidth * 0.8, 760),
+      behavior: 'smooth',
+    });
+  }
 
   return (
-    <div className="-mx-4 sm:-mx-6 -mt-6 space-y-0">
-      {/* ──────────────── 1. HERO SECTION ORIGINAL ──────────────── */}
-      <section className="relative overflow-hidden py-16 lg:py-24 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Columna Izquierda: Textos y CTAs */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Pill superior */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#e94560]/40 bg-[#e94560]/10 text-xs font-semibold text-[#e94560]">
-              <Star className="h-3.5 w-3.5" />
-              <span>Sistema de reputación por género</span>
+    <div className="-mt-6 overflow-hidden">
+      <section className="relative isolate min-h-[590px] overflow-hidden border-b border-[#0f3460]">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_35%,rgba(233,69,96,0.12),transparent_34%)]" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1a1a2e] via-[#181b32] to-[#121a31]" />
+
+        <div className="mx-auto grid min-h-[590px] max-w-7xl items-center px-4 py-16 sm:px-6 lg:grid-cols-12 lg:py-20">
+          <div className="max-w-3xl lg:col-span-7">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#e94560]/35 bg-[#e94560]/10 px-3.5 py-1.5 text-xs font-bold text-[#ff6b81] backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Tu próxima gran película empieza acá
             </div>
-
-            {/* Título Principal */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#f5f5f5] leading-tight tracking-tight">
-              Conecta con el cine a través de{' '}
-              <span className="text-[#e94560]">reseñas confiables</span>
+            <h1 className="text-4xl font-black leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">
+              El cine se disfruta más cuando la recomendación{' '}
+              <span className="text-[#e94560]">tiene criterio.</span>
             </h1>
-
-            {/* Subtítulo */}
-            <p className="text-base sm:text-lg text-[#a0a0a0] max-w-xl leading-relaxed">
-              Descubre películas basándote en opiniones de usuarios especializados en cada género.
-              Comparte tus reseñas y construye tu reputación como crítico de cine.
+            <p className="mt-6 max-w-2xl text-base leading-7 text-[#b8b8c5] sm:text-lg">
+              Descubrí películas a través de reseñas reales, encontrá especialistas por género y
+              construí tu propia voz dentro de la comunidad.
             </p>
-
-            {/* Botones de Acción */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/explorar"
-                className="inline-flex items-center justify-center gap-2.5 bg-[#e94560] text-white hover:bg-[#e94560]/90 px-6 py-3.5 rounded-lg text-base font-semibold shadow-lg shadow-[#e94560]/25 transition-all"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#e94560] px-6 font-bold text-white shadow-xl shadow-[#e94560]/20 transition-all hover:-translate-y-0.5 hover:bg-[#f0526b]"
               >
-                <Play className="h-4 w-4 fill-white" />
-                Comenzar Ahora
+                <Play className="h-4 w-4 fill-current" /> Explorar catálogo
               </Link>
-
-              <Link
-                to="/ranking"
-                className="inline-flex items-center justify-center border border-[#0f3460] bg-[#16213e] text-[#f5f5f5] hover:bg-[#0f3460] px-6 py-3.5 rounded-lg text-base font-semibold transition-all"
+              <a
+                href="#destacadas"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 font-bold text-white backdrop-blur-sm transition-all hover:bg-white/10"
               >
-                Ver Ranking
-              </Link>
+                Ver recomendaciones <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
 
-            {/* Contadores / Stats Dinámicos */}
-            <div className="flex flex-wrap gap-8 pt-6 border-t border-[#0f3460]/60">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-[#e94560]" />
-                  <span className="text-2xl font-black text-[#f5f5f5]">
-                    {stats ? stats.usersCount : '...'}
-                  </span>
+            <div className="mt-10 grid max-w-xl grid-cols-3 gap-3 border-t border-white/10 pt-6">
+              {[
+                { icon: Film, value: stats?.moviesCount, label: 'Películas' },
+                { icon: Star, value: stats?.reviewsCount, label: 'Reseñas' },
+                { icon: Users, value: stats?.usersCount, label: 'Cinéfilos' },
+              ].map(({ icon: Icon, value, label }) => (
+                <div key={label} className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 shrink-0 text-[#e94560]" />
+                    <span className="text-xl font-black tabular-nums text-white">
+                      {value ?? '—'}
+                    </span>
+                  </div>
+                  <span className="mt-1 block text-[11px] text-[#8f8f9f]">{label}</span>
                 </div>
-                <p className="text-xs text-[#a0a0a0]">Usuarios Activos</p>
-              </div>
-
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-[#e94560]" />
-                  <span className="text-2xl font-black text-[#f5f5f5]">
-                    {stats ? stats.reviewsCount : '...'}
-                  </span>
-                </div>
-                <p className="text-xs text-[#a0a0a0]">Reseñas</p>
-              </div>
-
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-[#e94560]" />
-                  <span className="text-2xl font-black text-[#f5f5f5]">
-                    {stats ? stats.genresCount : '...'}
-                  </span>
-                </div>
-                <p className="text-xs text-[#a0a0a0]">Géneros</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Columna Derecha: Imagen Oficial NexoHub con Aura Glow */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
-            {/* Círculo resplandor en fondo */}
-            <div className="absolute inset-0 bg-[#e94560]/15 rounded-full blur-3xl opacity-70 pointer-events-none" />
-            <img src="/nexohub-logo.png" alt="NexoHub Logo" className="nexologo relative z-10" />
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────── 2. ¿POR QUÉ NEXOHUB? (FEATURES SECTION) ──────────────── */}
-      <section className="bg-[#16213e] py-20 px-4 sm:px-6 border-y border-[#0f3460]">
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#f5f5f5]">
-              ¿Por qué <span className="text-[#e94560]">NexoHub</span>?
-            </h2>
-            <p className="text-sm sm:text-base text-[#a0a0a0] max-w-2xl mx-auto">
-              Un sistema diseñado para que descubras el mejor contenido según tu género favorito.
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Feature 1 */}
-            <div className="rounded-xl border border-[#0f3460] bg-[#1a1a2e] p-6 transition-all hover:border-[#e94560]/50 hover:shadow-lg hover:shadow-[#e94560]/5 group">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#e94560]/10 text-[#e94560]">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-[#f5f5f5]">Reputación por Género</h3>
-              <p className="text-xs text-[#a0a0a0] leading-relaxed">
-                Cada usuario construye su reputación en géneros específicos, asegurando que las
-                reseñas vengan de verdaderos conocedores.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="rounded-xl border border-[#0f3460] bg-[#1a1a2e] p-6 transition-all hover:border-[#e94560]/50 hover:shadow-lg hover:shadow-[#e94560]/5 group">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#e94560]/10 text-[#e94560]">
-                <Users className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-[#f5f5f5]">Comunidad Activa</h3>
-              <p className="text-xs text-[#a0a0a0] leading-relaxed">
-                Conecta con otros cinéfilos, sigue a tus críticos favoritos y descubre películas
-                recomendadas por personas con gustos similares.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="rounded-xl border border-[#0f3460] bg-[#1a1a2e] p-6 transition-all hover:border-[#e94560]/50 hover:shadow-lg hover:shadow-[#e94560]/5 group">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#e94560]/10 text-[#e94560]">
-                <Zap className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-[#f5f5f5]">Descubrimiento Preciso</h3>
-              <p className="text-xs text-[#a0a0a0] leading-relaxed">
-                Encuentra películas que realmente te gustarán gracias a nuestro sistema de filtrado
-                por género y reputación del reseñador.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="rounded-xl border border-[#0f3460] bg-[#1a1a2e] p-6 transition-all hover:border-[#e94560]/50 hover:shadow-lg hover:shadow-[#e94560]/5 group">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#e94560]/10 text-[#e94560]">
-                <Award className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-[#f5f5f5]">Críticas Verificadas</h3>
-              <p className="text-xs text-[#a0a0a0] leading-relaxed">
-                Un sistema transparente donde cada valoración cuenta y es respaldada por los
-                corazones de los cinéfilos de la plataforma.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────── 3. EXPLORA POR GÉNERO (GENRES SECTION) ──────────────── */}
-      <section className="py-20 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#f5f5f5]">
-              Explora por Género
-            </h2>
-            <p className="text-sm sm:text-base text-[#a0a0a0] max-w-2xl mx-auto">
-              Entrá a una categoría y encontrá películas, reseñas y usuarios con reputación en ese
-              género.
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {previewGenres.map((g) => (
-              <Link
-                key={g.slug}
-                to={`/explorar?genre=${g.slug}`}
-                className="group rounded-xl border border-[#0f3460] bg-[#16213e] p-6 transition-all hover:border-[#e94560] hover:shadow-lg hover:-translate-y-1 transform duration-300 block"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#e94560]/10 group-hover:bg-[#e94560]/20 transition-colors">
-                  <span className="text-xl font-black text-[#e94560]">
-                    {g.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <h3 className="mb-1 text-xl font-bold text-[#f5f5f5] group-hover:text-[#e94560] transition-colors">
-                  {g.name}
-                </h3>
-                <p className="text-[#a0a0a0] text-xs">Ver películas y reseñas de {g.name}.</p>
-              </Link>
-            ))}
-          </div>
-
-          <div className="text-center pt-4">
-            <Link
-              to="/generos"
-              className="inline-flex items-center justify-center rounded-lg bg-[#e94560] px-6 py-3 font-bold text-white hover:bg-[#e94560]/90 shadow-md shadow-[#e94560]/20 transition-all"
-            >
-              Ver todos los géneros
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────────── 4. PELÍCULAS DESTACADAS ──────────────── */}
-      <section className="bg-[#16213e] py-16 px-4 sm:px-6 border-y border-[#0f3460]">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#f5f5f5]">
-              Películas Destacadas
-            </h2>
-            <p className="text-sm text-[#a0a0a0] max-w-2xl mx-auto">
-              Las películas más valoradas por nuestra comunidad de expertos.
-            </p>
-          </div>
-
-          {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-64 rounded-xl bg-[#1a1a2e] animate-pulse" />
               ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {featuredMovies?.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
-              ))}
-            </div>
-          )}
+          </div>
 
-          <div className="text-center pt-4">
+          <div className="relative mt-12 flex items-center justify-center lg:col-span-5 lg:mt-0">
+            <div className="pointer-events-none absolute h-72 w-72 rounded-full bg-[#e94560]/15 blur-3xl sm:h-96 sm:w-96" />
+            <div className="pointer-events-none absolute h-64 w-64 rounded-full border border-[#e94560]/10 sm:h-80 sm:w-80" />
+            <img
+              src="/nexohub-logo.png"
+              alt="NexoHub"
+              className="nexologo relative z-10 max-h-[320px] object-contain"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section id="destacadas" className="scroll-mt-24 py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mb-7 flex items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#e94560]">
+                Selección NexoHub
+              </span>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
+                Películas para descubrir
+              </h2>
+              <p className="mt-2 text-sm text-[#a0a0a0]">
+                Las mejor valoradas por la comunidad, en un solo recorrido.
+              </p>
+            </div>
+            <div className="hidden gap-2 sm:flex">
+              <RailButton direction="left" onClick={() => scrollRail(moviesRailRef, -1)} />
+              <RailButton direction="right" onClick={() => scrollRail(moviesRailRef, 1)} />
+            </div>
+          </div>
+
+          <div
+            ref={moviesRailRef}
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 scrollbar-none sm:gap-5"
+          >
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-[410px] w-[220px] shrink-0 animate-pulse rounded-xl bg-[#16213e]"
+                  />
+                ))
+              : featuredMovies?.map((movie) => (
+                  <div
+                    key={movie.id}
+                    className="w-[72vw] max-w-[235px] shrink-0 snap-start sm:w-[220px]"
+                  >
+                    <MovieCard movie={movie} />
+                  </div>
+                ))}
+          </div>
+          <div className="flex justify-end">
             <Link
               to="/explorar?sort=rating"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#e94560] hover:text-[#e94560]/80 transition-colors"
+              className="inline-flex items-center gap-2 text-sm font-bold text-[#e94560] hover:text-[#ff7187]"
             >
               Ver catálogo completo <ArrowRight className="h-4 w-4" />
             </Link>
@@ -283,20 +197,147 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ──────────────── 5. ÚNETE A LA COMUNIDAD (CTA SECTION) ──────────────── */}
-      <section className="bg-[#e94560] py-20 px-4 sm:px-6 text-center">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <h2 className="text-3xl sm:text-4xl font-black text-white">Únete a la Comunidad</h2>
-          <p className="text-base sm:text-lg text-white/90">
-            Comienza a compartir tus reseñas y construye tu reputación como crítico de cine.
-          </p>
-          <div className="pt-2 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/explorar"
-              className="inline-flex items-center justify-center border-2 border-white text-white hover:bg-white/10 px-8 py-3 rounded-lg text-base font-bold transition-all"
-            >
-              Explorar Películas
-            </Link>
+      <section
+        id="generos"
+        className="scroll-mt-24 border-y border-[#0f3460] bg-[#121a31] py-16 sm:py-20"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mb-7 flex items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#e94560]">
+                Encontrá tu estilo
+              </span>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
+                Explorá por género
+              </h2>
+              <p className="mt-2 text-sm text-[#a0a0a0]">
+                Deslizá y entrá directamente al universo que tengas ganas de ver.
+              </p>
+            </div>
+            <div className="hidden gap-2 sm:flex">
+              <RailButton direction="left" onClick={() => scrollRail(genresRailRef, -1)} />
+              <RailButton direction="right" onClick={() => scrollRail(genresRailRef, 1)} />
+            </div>
+          </div>
+
+          <div
+            ref={genresRailRef}
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 scrollbar-none"
+          >
+            {genres.map((genre) => (
+              <Link
+                key={genre.slug}
+                to={`/explorar?genre=${genre.slug}`}
+                className="group relative h-52 w-[78vw] max-w-[310px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#0f3460] bg-[#16213e] p-5 transition-all hover:-translate-y-1 hover:border-[#e94560]/50"
+              >
+                {genre.featuredMovie?.posterUrl && (
+                  <img
+                    src={genre.featuredMovie.posterUrl}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105 group-hover:opacity-50"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#10182d] via-[#10182d]/65 to-transparent" />
+                <div className="relative flex h-full flex-col justify-end">
+                  <div className="mb-auto flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-[#ff6b81] backdrop-blur-md">
+                    <Film className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-xl font-black text-white">{genre.name}</h3>
+                  <p className="mt-1 text-xs text-white/60">
+                    {genre.moviesCount ?? 0} películas disponibles
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <Link
+            to="/generos"
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#e94560] hover:text-[#ff7187]"
+          >
+            Ver todos los géneros <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
+      <section id="por-que-nexohub" className="scroll-mt-24 py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#e94560]">
+              Una comunidad con criterio
+            </span>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
+              No es otra lista de películas.
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-[#a0a0a0]">
+              NexoHub conecta cada recomendación con la experiencia real de quien la escribe.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                icon: ShieldCheck,
+                title: 'Reputación por género',
+                text: 'Identificá rápidamente quién realmente conoce el tipo de cine que estás buscando.',
+              },
+              {
+                icon: Users,
+                title: 'Comunidad activa',
+                text: 'Encontrá otros cinéfilos y descubrí películas a partir de gustos compartidos.',
+              },
+              {
+                icon: Zap,
+                title: 'Descubrimiento preciso',
+                text: 'Filtrá por género, valoración y conversación para llegar antes a algo que valga la pena.',
+              },
+              {
+                icon: Award,
+                title: 'Críticas que cuentan',
+                text: 'Cada reacción de la comunidad ayuda a destacar las opiniones más útiles.',
+              },
+            ].map(({ icon: Icon, title, text }) => (
+              <article
+                key={title}
+                className="rounded-2xl border border-[#0f3460] bg-[#16213e]/70 p-6 text-center transition-all hover:-translate-y-1 hover:border-[#e94560]/40"
+              >
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[#e94560]/10 text-[#e94560]">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-6 text-lg font-bold text-white">{title}</h3>
+                <p className="mt-2 text-xs leading-5 text-[#a0a0a0]">{text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="comunidad" className="scroll-mt-24 px-4 pb-10 sm:px-6 sm:pb-16">
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl border border-[#e94560]/30 bg-[#e94560] px-6 py-12 text-center shadow-2xl shadow-[#e94560]/10 sm:px-10 sm:py-16">
+          <div className="absolute -left-20 -top-24 h-64 w-64 rounded-full border-[45px] border-white/5" />
+          <div className="absolute -bottom-32 -right-16 h-72 w-72 rounded-full border-[50px] border-white/5" />
+          <div className="relative mx-auto max-w-2xl">
+            <TrendingUp className="mx-auto h-7 w-7 text-white/80" />
+            <h2 className="mt-4 text-3xl font-black text-white sm:text-4xl">
+              Tu opinión también construye el catálogo
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-white/85 sm:text-base">
+              Compartí reseñas, ganá reputación en tus géneros favoritos y ayudá a otros a elegir
+              mejor.
+            </p>
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                to="/registro"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-6 font-bold text-[#d93651] transition-transform hover:-translate-y-0.5"
+              >
+                Crear mi perfil
+              </Link>
+              <Link
+                to="/explorar"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-white/50 px-6 font-bold text-white transition-colors hover:bg-white/10"
+              >
+                Seguir explorando
+              </Link>
+            </div>
           </div>
         </div>
       </section>

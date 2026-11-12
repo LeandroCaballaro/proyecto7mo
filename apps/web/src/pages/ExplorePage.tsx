@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Filter, PlusCircle, Search, SlidersHorizontal, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  PlusCircle,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { GENRES, type ApiPaginated, type MovieDto } from '@nexohub/shared';
 import { Button, Combobox, Input, Pagination, Skeleton } from '../components/ui';
 import { MovieCard } from '../features/movies/MovieCard';
@@ -9,6 +17,7 @@ import { apiClient } from '../lib/api-client';
 
 export function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const genresRailRef = useRef<HTMLDivElement>(null);
 
   const [q, setQ] = useState(searchParams.get('q') || '');
   const [debouncedQ, setDebouncedQ] = useState(q);
@@ -61,23 +70,51 @@ export function ExplorePage() {
     { value: 'year', label: 'Año de estreno' },
   ];
 
+  const activeFilters =
+    Number(Boolean(q)) + Number(Boolean(selectedGenre)) + Number(currentSort !== 'newest');
+
+  function resetFilters() {
+    setQ('');
+    setDebouncedQ('');
+    setSearchParams(new URLSearchParams());
+  }
+
+  function scrollGenres(direction: number) {
+    genresRailRef.current?.scrollBy({ left: direction * 420, behavior: 'smooth' });
+  }
+
   return (
-    <div className="space-y-8 pb-16">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-[#f5f5f5]">Explorar Catálogo</h1>
-        <p className="text-xs sm:text-sm text-[#a0a0a0] mt-1">
-          Busca películas, filtra por categoría y descubre qué opinan otros cinéfilos.
-        </p>
+    <div className="space-y-7 pb-16">
+      <div className="flex flex-col gap-4 border-b border-[#0f3460]/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#e94560]">
+            <SlidersHorizontal className="h-3.5 w-3.5" /> Catálogo NexoHub
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-[#f5f5f5] sm:text-4xl">
+            Encontrá algo que valga la pena ver
+          </h1>
+          <p className="mt-2 text-sm text-[#a0a0a0]">
+            Buscá, combiná filtros y ordená el catálogo a tu manera.
+          </p>
+        </div>
+        {activeFilters > 0 && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="inline-flex items-center gap-2 self-start rounded-lg px-3 py-2 text-xs font-bold text-[#a0a0a0] transition-colors hover:bg-[#16213e] hover:text-white sm:self-auto"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Limpiar {activeFilters}{' '}
+            {activeFilters === 1 ? 'filtro' : 'filtros'}
+          </button>
+        )}
       </div>
 
-      {/* Filters Toolbar */}
-      <div className="p-5 rounded-2xl bg-[#16213e] border border-[#0f3460] space-y-4 shadow-xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          {/* Search Input con componente reutilizable Input */}
-          <div className="lg:col-span-2">
+      <div className="z-30 space-y-4 rounded-2xl border border-[#0f3460] bg-[#121a31]/95 p-4 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-5 md:sticky md:top-20">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+          <div className="md:col-span-6">
             <Input
-              placeholder="Buscar por título o director..."
+              aria-label="Buscar películas"
+              placeholder="Título, director o palabra clave..."
               value={q}
               onChange={(e) => {
                 setQ(e.target.value);
@@ -92,57 +129,79 @@ export function ExplorePage() {
                       setQ('');
                       updateQuery('q', '');
                     }}
-                    className="p-1 hover:text-white transition-colors cursor-pointer"
+                    aria-label="Limpiar búsqueda"
+                    className="cursor-pointer rounded-full p-1 transition-colors hover:bg-white/5 hover:text-white"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 ) : undefined
               }
+              className="h-11 bg-[#0f172a]"
             />
           </div>
-
-          {/* Genre Combobox reutilizable */}
-          <Combobox
-            options={genreOptions}
-            value={selectedGenre}
-            onChange={(val) => updateQuery('genre', val)}
-            placeholder="Todos los géneros"
-            searchPlaceholder="Filtrar género..."
-          />
-
-          {/* Sort Selector con Combobox reutilizable */}
-          <Combobox
-            options={sortOptions}
-            value={currentSort}
-            onChange={(val) => updateQuery('sort', val)}
-            placeholder="Ordenar por..."
-            clearable={false}
-            searchable={false}
-          />
+          <div className="md:col-span-3">
+            <Combobox
+              options={genreOptions}
+              value={selectedGenre}
+              onChange={(val) => updateQuery('genre', val)}
+              placeholder="Todos los géneros"
+              searchPlaceholder="Buscar género..."
+            />
+          </div>
+          <div className="md:col-span-3">
+            <Combobox
+              options={sortOptions}
+              value={currentSort}
+              onChange={(val) => updateQuery('sort', val)}
+              placeholder="Ordenar por..."
+              clearable={false}
+              searchable={false}
+            />
+          </div>
         </div>
 
-        {/* Quick Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <span className="text-[#a0a0a0] flex items-center gap-1 shrink-0 mr-1 font-medium">
-            <Filter className="h-3 w-3 text-[#e94560]" /> Géneros rápidos:
-          </span>
-          {GENRES.map((g) => {
-            const isSelected = selectedGenre === g.slug;
-            return (
-              <button
-                key={g.slug}
-                type="button"
-                onClick={() => updateQuery('genre', isSelected ? '' : g.slug)}
-                className={`px-3 py-1 rounded-full border text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#e94560] text-white border-[#e94560] shadow-md shadow-[#e94560]/30'
-                    : 'bg-[#0f172a] text-[#cbd5e1] border-[#0f3460] hover:text-white hover:border-[#e94560]/50'
-                }`}
-              >
-                {g.name}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2 border-t border-white/5 pt-3">
+          <button
+            type="button"
+            onClick={() => scrollGenres(-1)}
+            aria-label="Ver géneros anteriores"
+            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#0f3460] text-[#a0a0a0] hover:text-white sm:flex"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div
+            ref={genresRailRef}
+            className="flex flex-1 snap-x gap-2 overflow-x-auto scrollbar-none"
+          >
+            <button
+              type="button"
+              onClick={() => updateQuery('genre', '')}
+              className={`shrink-0 snap-start rounded-full border px-3.5 py-1.5 text-xs font-bold transition-all ${!selectedGenre ? 'border-[#e94560] bg-[#e94560] text-white shadow-lg shadow-[#e94560]/20' : 'border-[#0f3460] bg-[#0f172a] text-[#aeb2bf] hover:border-white/20 hover:text-white'}`}
+            >
+              Todos
+            </button>
+            {GENRES.map((genre) => {
+              const selected = selectedGenre === genre.slug;
+              return (
+                <button
+                  key={genre.slug}
+                  type="button"
+                  onClick={() => updateQuery('genre', selected ? '' : genre.slug)}
+                  className={`shrink-0 snap-start rounded-full border px-3.5 py-1.5 text-xs font-bold transition-all ${selected ? 'border-[#e94560] bg-[#e94560] text-white shadow-lg shadow-[#e94560]/20' : 'border-[#0f3460] bg-[#0f172a] text-[#aeb2bf] hover:border-white/20 hover:text-white'}`}
+                >
+                  {genre.name}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => scrollGenres(1)}
+            aria-label="Ver más géneros"
+            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#0f3460] text-[#a0a0a0] hover:text-white sm:flex"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -186,7 +245,8 @@ export function ExplorePage() {
           <SlidersHorizontal className="h-10 w-10 text-[#a0a0a0] mx-auto opacity-50" />
           <h3 className="text-base font-semibold text-[#f5f5f5]">No se encontraron películas</h3>
           <p className="text-xs text-[#a0a0a0] max-w-sm mx-auto">
-            ¿La película no está en nuestro catálogo? Búscala en el catálogo externo y sé el primero en reseñarla.
+            ¿La película no está en nuestro catálogo? Búscala en el catálogo externo y sé el primero
+            en reseñarla.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             <Button
