@@ -17,6 +17,7 @@
     "db:seed": "prisma db seed",
     "db:import-movies": "tsx prisma/seed/import-movies.ts",
     "db:accounts": "tsx prisma/seed/accounts.ts",
+    "db:seed-community": "tsx prisma/seed/community.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

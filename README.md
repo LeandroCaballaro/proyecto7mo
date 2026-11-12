@@ -32,6 +32,7 @@ npm run db:seed     # Géneros, usuarios demo, cuentas personales y catálogo ba
 npm run db:import-movies -w @nexohub/api                          # 40 películas nuevas (año actual y anterior)
 npm run db:import-movies -w @nexohub/api -- --count 100 --years 3 # cantidad y antigüedad a medida
 npm run db:accounts -w @nexohub/api                               # solo crea/actualiza las cuentas personales
+npm run db:seed-community -w @nexohub/api                         # 120 usuarios con reseñas, likes, respuestas y favoritas
 
 # Tests y comprobación de tipos:
 npm run typecheck
