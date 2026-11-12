@@ -219,23 +219,25 @@ export function GenresPage() {
                   </p>
                   <span className="text-[11px] text-white/30">Cambio automático en 7 segundos</span>
                 </div>
-                <div className="flex snap-x gap-3 overflow-x-auto scrollbar-none">
+                <div className="-mx-1 -my-2 flex snap-x gap-3 overflow-x-auto px-1 py-2 scrollbar-none">
                   {upcomingMovies.map((movie) => (
                     <button
                       key={movie.id}
                       type="button"
                       onClick={() => selectMovie(movie)}
-                      className="group relative h-20 w-48 shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-[#16213e] text-left transition-all hover:-translate-y-0.5 hover:border-[#e94560]/60 sm:w-56"
+                      className="group relative isolate h-20 w-48 shrink-0 snap-start cursor-pointer rounded-xl border border-white/10 bg-[#16213e] text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[#e94560]/60 hover:shadow-lg hover:shadow-[#e94560]/15 sm:w-56"
                     >
-                      {movie.posterUrl && (
-                        <img
-                          src={movie.posterUrl}
-                          alt=""
-                          loading="lazy"
-                          className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-105 group-hover:opacity-55"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#0b1224] via-[#0b1224]/80 to-transparent" />
+                      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                        {movie.posterUrl && (
+                          <img
+                            src={movie.posterUrl}
+                            alt=""
+                            loading="lazy"
+                            className="h-full w-full object-cover opacity-40 transition-all duration-500 group-hover:scale-105 group-hover:opacity-55"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#0b1224] via-[#0b1224]/80 to-transparent" />
+                      </div>
                       <div className="relative flex h-full flex-col justify-end p-3">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#ff7187]">
                           {movie.genre.name}
